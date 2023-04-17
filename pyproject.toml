@@ -1,0 +1,83 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vscripts"
+version = "0.1.0"
+description = "A utility to automate video editing tasks."
+readme = "README.md"
+license = { file = "LICENSE.md" }
+authors = [{ name = "Iago Santos" }]
+requires-python = ">=3.12"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only"
+]
+dependencies = [
+  "fast-langdetect",
+  "lhotse",
+  "openai-whisper",
+  "pyutils @ git+https://github.com/iagocanalejas/pyutils.git@master",
+  "requests",
+]
+
+[project.scripts]
+vscripts = "vscripts.main:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["vscripts*"]
+
+[tool.setuptools.package-data]
+vscripts = ["py.typed"]
+
+
+[tool.pyright]
+strictListInference = true
+strictDictionaryInference = true
+strictSetInference = true
+deprecateTypingAliases = true
+exclude = [
+  "**/build",
+  "**/dist",
+  "**/out",
+  "**/venv",
+]
+
+[tool.pytest.ini_options]
+markers = [
+    "integration: marks tests that run external tools or long operations (deselect with '-m \"not integration\"')",
+    "cmd: marks tests that run command line interface tests (deselect with '-m \"not cmd\"')",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["vscripts"]
+omit = [
+  "**/__init__.py",
+  "vscripts/**/_protocol.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+exclude_also = [
+  "pragma: no cover*",
+  "import .*",
+  "def __repr__",
+  "if self.debug:",
+  "if settings.DEBUG",
+  "raise AssertionError",
+  "raise NotImplementedError",
+  "raise",
+  "if 0:",
+  "if False:",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+  "class .*\\bProtocol\\):",
+  "@(abc\\.)?abstractmethod",
+  "logger.*",
+  "-> ['\"]?NoReturn['\"]?:",
+  "self.fail*",
+  "def __str__",
+]

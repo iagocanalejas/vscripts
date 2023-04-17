@@ -1,0 +1,147 @@
+import logging
+from pathlib import Path
+from typing import Literal
+
+from pyutils.paths import create_temp_dir
+from vscripts.commands._utils import get_output_file_path, run_ffmpeg_command
+from vscripts.data.language import find_language
+from vscripts.data.streams import AudioStream, SubtitleStream, VideoStream
+
+logger = logging.getLogger("vscripts")
+
+
+def extract(
+    input_path: Path,
+    stream_type: Literal["audio", "subtitle"] = "audio",
+    track: int = 0,
+    output: Path | None = None,
+    **_,
+) -> Path:
+    """
+    Extract a specific audio or subtitle track from a multimedia file using FFmpeg and save it as a new file.
+    Args:
+        input_path (Path): The path to the multimedia file from which to extract the track.
+        stream_type (Literal["audio", "subtitle"], optional): The type of stream to extract. Default is "audio".
+        track (int, optional): The index of the track to extract. Default is 0.
+        output (Path | None): The path to save the output file.
+    Returns: The path to the newly created file containing the extracted track.
+    """
+    if not input_path.is_file() or not input_path.exists():
+        raise ValueError(f"invalid {input_path=}")
+    if output is not None and not output.is_dir():
+        raise ValueError(f"invalid {output=}")
+
+    StreamClass = AudioStream if stream_type == "audio" else SubtitleStream
+    stream = StreamClass.from_file_stream(input_path, track)
+    ffmpeg_type = "a" if stream_type == "audio" else "s"
+
+    suffix = stream.codec_name
+    if not suffix:
+        suffix = "m4a" if stream_type == "audio" else "srt"
+    if suffix.lower() == "mov_text":
+        suffix = "srt"
+
+    with create_temp_dir() as temp_dir:
+        temp_output = Path(temp_dir) / f"temp_extracted.{suffix}"
+        logger.info(f"extracting {stream_type} track {track}  from {input_path}, outputting to {temp_output}")
+        command = ["ffmpeg", "-i", str(input_path), "-map", f"0:{ffmpeg_type}:{track}"]
+        command += ["-c", "copy"] if stream_type == "audio" else ["-c:s", "srt"]
+        command.append(str(temp_output))
+
+        logger.info(command)
+        run_ffmpeg_command(command)
+
+        stream = StreamClass.from_file(temp_output)[0]
+        lang = find_language(stream)
+
+        output = get_output_file_path(
+            output or input_path.parent,
+            default_name=f"{input_path.stem}_{lang}.{suffix}",
+        )
+
+        logger.info(f"moving extracted file to {output} with language code {lang}")
+        command = [
+            "ffmpeg",
+            "-i",
+            str(temp_output),
+            "-map",
+            "0",
+            "-c",
+            "copy",
+            f"-metadata:s:{ffmpeg_type}:0",
+            f"language={lang}",
+            str(output),
+        ]
+        logger.info(command)
+        run_ffmpeg_command(command)
+
+    return output
+
+
+def dissect(input_path: Path, output: Path | None = None, **_) -> Path:
+    """
+    Dissect a multimedia file into its individual streams using FFmpeg and save them as separate files.
+    Args:
+        input_path (Path): The path to the multimedia file to dissect.
+        output (Path | None): The directory to save the dissected streams.
+    Returns: The path to the directory containing the dissected streams.
+    """
+    if not input_path.is_file() or not input_path.exists():
+        raise ValueError(f"invalid {input_path=}")
+
+    output = output if output is not None else input_path.parent
+    if not output.is_dir():
+        raise ValueError(f"invalid {output=}")
+
+    video_stream = VideoStream.from_file(input_path)
+    audio_streams = AudioStream.from_file(input_path)
+    subtitle_streams = SubtitleStream.from_file(input_path)
+
+    if video_stream is not None:
+        logger.info(f"excracting video stream ({video_stream.codec_name})")
+        command = [
+            "ffmpeg",
+            "-i",
+            str(input_path),
+            "-map",
+            f"0:{video_stream.index}",
+            "-c",
+            "copy",
+            str(output / f"stream_{video_stream.index:03d}.mp4"),
+        ]
+        logging.info(command)
+        run_ffmpeg_command(command)
+
+    logger.info(f"excracting {len(audio_streams)} audio streams")
+    for stream in audio_streams:
+        logger.info(f"\t- audio stream {stream.index} ({stream.codec_name})")
+        command = [
+            "ffmpeg",
+            "-i",
+            str(input_path),
+            "-map",
+            f"0:{stream.index}",
+            "-c",
+            "copy",
+            str(output / f"stream_{stream.index:03d}.aac"),
+        ]
+        logging.info(command)
+        run_ffmpeg_command(command)
+
+    logger.info(f"excracting {len(subtitle_streams)} subtitle streams")
+    for stream in subtitle_streams:
+        logger.info(f"\t- subtitle stream {stream.index} ({stream.codec_name})")
+        command = [
+            "ffmpeg",
+            "-i",
+            str(input_path),
+            "-map",
+            f"0:{stream.index}",
+            "-c:s",
+            "srt",
+            str(output / f"stream_{stream.index:03d}.srt"),
+        ]
+        logging.info(command)
+        run_ffmpeg_command(command)
+
+    return output
