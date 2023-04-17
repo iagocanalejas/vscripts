@@ -1,0 +1,27 @@
+import importlib.metadata
+from typing import Literal
+
+APP_NAME = "VScripts"
+VERSION = importlib.metadata.version(APP_NAME.lower())
+
+NTSC_RATE = 23.976
+PAL_RATE = 25.0
+NTSC_BROADCAST_RATE = 29.97
+
+COMMAND_ATEMPO = "atempo"
+COMMAND_ATEMPO_WITH = "atempo-with"
+COMMAND_ATEMPO_VIDEO = "atempo-video"
+COMMAND_DELAY = "delay"
+COMMAND_HASTEN = "hasten"
+COMMAND_EXTRACT = "extract"
+COMMAND_DISSECT = "dissect"
+COMMAND_APPEND = "append"
+COMMAND_APPEND_SUBS = "subs"
+
+ENCODING_1080P = "1080p"
+ENCODING_2160P = "2160p"
+EncodingPreset = Literal["1080p", "2160p"]
+ENCODING_PRESETS = {
+    ENCODING_1080P: "H.265 NVENC 1080p",
+    ENCODING_2160P: "H.265 NVENC 2160p 4K",
+}
