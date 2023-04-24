@@ -12,5 +12,12 @@ python atempo.py <path> \
 ```sh
 python extract.py <path> \
     --track=1 \
-    --extension=aac
+    --extension=None
+```
+
+## Delay
+
+```sh
+python delay.py <path> \
+    --delay=1
 ```
