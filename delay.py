@@ -11,12 +11,14 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler(sys.stdout))
 
-COMMAND = 'ffmpeg -i {input} -af "adelay={delay}s:all=true" {output}_delayed{extension}'
+COMMAND = 'ffmpeg -i {input} -af "adelay={delay}s:all=true" {output}_delayed_{delay}{extension}'
+
 
 def _parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('path', help='path to be handled')
-    parser.add_argument('--delay', type=int, default=1, help='delay to apply. float (default=1)')
+    parser.add_argument('--delay', type=int, default=1,
+                        help='delay to apply. float (default=1)')
     return parser.parse_args()
 
 
@@ -36,4 +38,3 @@ if __name__ == '__main__':
 
     logger.info(command)
     output = subprocess.check_output(command, shell=True)
-
