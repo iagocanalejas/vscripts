@@ -1,11 +1,11 @@
 import argparse
 import logging
-import sys
 import os
 import subprocess
+import sys
 from pathlib import Path
 
-from _utils import inout
+from commands._utils import inout
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -22,19 +22,26 @@ def _parse_arguments():
     return parser.parse_args()
 
 
-if __name__ == '__main__':
-    args = _parse_arguments()
-    logger.info(f'{os.path.basename(__file__)}:: args -> {args.__dict__}')
-
-    path = Path(args.path)
+def hasten(path: str, hasten: float = 1.0):
+    path = Path(path)
     input, output = inout(path)
 
     command = COMMAND.format(
         input=input,
         output=output,
-        hasten=args.hasten,
+        hasten=hasten,
         extension=path.suffix,
     )
 
     logger.info(command)
-    output = subprocess.check_output(command, shell=True)
+    subprocess.check_output(command, shell=True)
+
+
+if __name__ == '__main__':
+    args = _parse_arguments()
+    logger.info(f'{os.path.basename(__file__)}:: args -> {args.__dict__}')
+
+    hasten(
+        path=args.path,
+        hasten=args.hasten,
+    )

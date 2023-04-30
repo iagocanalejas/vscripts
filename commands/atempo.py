@@ -1,15 +1,10 @@
 import argparse
 import logging
-import sys
 import os
 import subprocess
 from pathlib import Path
 
-from _utils import inout
-
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-logger.addHandler(logging.StreamHandler(sys.stdout))
+from commands._utils import inout
 
 FRAME_RATE = 23.976024
 COMMAND = 'ffmpeg -i {path} -filter:a "atempo={conversion}" -vn {output}_out{extension}'
@@ -23,13 +18,10 @@ def _parse_arguments():
     return parser.parse_args()
 
 
-if __name__ == '__main__':
-    args = _parse_arguments()
-    logger.info(f'{os.path.basename(__file__)}:: args -> {args.__dict__}')
-
-    path = Path(args.path)
+def atempo(path: str, rate: float = 25.0):
+    path = Path(path)
     input, output = inout(path)
-    conversion = round(FRAME_RATE / args.rate, 8)
+    conversion = round(FRAME_RATE / rate, 8)
 
     command = COMMAND.format(
         path=input,
@@ -37,6 +29,16 @@ if __name__ == '__main__':
         output=output,
         extension=path.suffix,
     )
-    logger.info(command)
 
-    output = subprocess.check_output(command, shell=True)
+    logging.info(command)
+    subprocess.check_output(command, shell=True)
+
+
+if __name__ == '__main__':
+    args = _parse_arguments()
+    logging.info(f'{os.path.basename(__file__)}:: args -> {args.__dict__}')
+
+    atempo(
+        path=args.path,
+        rate=args.rate,
+    )
