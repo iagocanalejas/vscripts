@@ -16,10 +16,10 @@ def _parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('command', help='command to be run')
     parser.add_argument('path', help='path to be handled')
-    args, extra = parser.parse_known_args()
+    parsed, extra = parser.parse_known_args()
 
     extra = {v.split("=")[0]: v.split("=")[1] for v in extra}
-    return args, extra
+    return parsed, extra
 
 
 if __name__ == '__main__':

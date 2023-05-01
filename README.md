@@ -1,45 +1,35 @@
+# VScript
+
+```sh
+python extract.py <path> <command> <arguments>
+```
+
 # Commands
 
-## VScript
+### Atempo
 
 ```sh
-python extract.py <path> <command> \
-    --rate=25 (float)
-    --track=0 (int)
-    --delay=1.0 (float)
-    --hasten=1.0 (float)
-
-    |command|
-        - atempo
-        - extract
-        - delay
-        - hasten
-```
-
-## Atempo
-
-```sh
-python atempo.py <path> \
+python vscript.py atempo <path> \
     --rate=25 (float)
 ```
 
-## Extract
+### Extract
 
 ```sh
-python extract.py <path> \
+python vscript.py extract <path> \
     --track=0 (int)
 ```
 
-## Delay
+### Delay
 
 ```sh
-python delay.py <path> \
+python vscript.py delay <path> \
     --delay=1.0 (float)
 ```
 
-## Hasten
+### Hasten
 
 ```sh
-python hasten.py <path> \
+python vscript.py hasten <path> \
     --hasten=1.0 (float)
 ```
