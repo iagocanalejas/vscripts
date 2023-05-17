@@ -12,14 +12,15 @@ FRAME_RATE = 23.976024
 def _parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('path', help='path to be handled')
-    parser.add_argument('--rate', type=float, default=25.0, help='framerate from witch we are converting. float (default=25.0)')
+    parser.add_argument('--rate', type=float, default=25.0,
+                        help='framerate from witch we are converting. float (default=25.0)')
     return parser.parse_args()
 
 
 def atempo(path: str, rate: float = 25.0):
     path = Path(path)
     file, output = inout(path)
-    conversion = round(FRAME_RATE / rate, 8)
+    conversion = round(FRAME_RATE / float(rate), 8)
 
     command = f'ffmpeg -i {file} -filter:a "atempo={conversion}" -vn {output}_out{path.suffix}'
     logging.info(command)

@@ -16,6 +16,7 @@ def _parse_arguments():
 
 def delay(path: str, delay: float = 1.0):
     path = Path(path)
+    delay = float(delay)
     file, output = inout(path)
 
     command = f'ffmpeg -i {file} -af "adelay={int(delay * 1000)}:all=true" {output}_delayed_{int(delay * 1000)}{path.suffix}'
