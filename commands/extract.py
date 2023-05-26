@@ -22,7 +22,7 @@ def _audio_format(path: str, track: int) -> str:
     return re.sub(r"\s", "", subprocess.check_output(probe_command, shell=True).decode("utf-8"), flags=re.UNICODE)
 
 
-def extract(path: str, track: int = 1):
+def extract(path: str, track: int = 0):
     errors = []
     files = expand_path(path)
 
