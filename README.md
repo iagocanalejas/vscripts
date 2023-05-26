@@ -33,3 +33,13 @@ python vscript.py delay <path> \
 python vscript.py hasten <path> \
     --hasten=1.0 (float)
 ```
+
+# DownloadYT
+Adds a watcher into the given file and download all the URLs found in it.
+
+```sh
+python downloadyt.py 
+    -f, --file <path> (./todo.txt)
+    -o, --out <path> (./out)
+
+```
