@@ -6,24 +6,23 @@ from pathlib import Path
 
 from commands._utils import inout
 
-FRAME_RATE = 23.976024
-
 
 def _parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('path', help='path to be handled')
-    parser.add_argument('--rate', type=float, default=25.0,
-                        help='framerate from witch we are converting. float (default=25.0)')
+    parser.add_argument('--file', type=str, help='file to append')
     return parser.parse_args()
 
 
-def atempo(path: str, rate: float = 25.0) -> str:
+def append(path: str, file: str) -> str:
     path = Path(path)
-    file, output = inout(path)
-    output = f'{output}_atempo{path.suffix}'
-    conversion = round(FRAME_RATE / float(rate), 8)
+    target_file, output = inout(path)
+    output = f'{output}_out{path.suffix}'
 
-    command = f'ffmpeg -i {file} -filter:a "atempo={conversion}" -vn {output}'
+    if not os.path.isfile(file):
+        raise ValueError(f'invalid {file=}')
+
+    command = f'ffmpeg -i {target_file} -i {file} -map 0 -map 1 -c copy {output}'
     logging.info(command)
 
     # noinspection SubprocessShellMode
@@ -35,4 +34,4 @@ if __name__ == '__main__':
     args = _parse_arguments()
     logging.info(f'{os.path.basename(__file__)}:: args -> {args.__dict__}')
 
-    atempo(args.path, args.rate)
+    append(args.path, args.file)

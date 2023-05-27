@@ -8,6 +8,7 @@ python vscript.py <path>
     atempo[=25.0]
     delay[=1.0]
     hasten[=1.0]
+    append[=LAST_OUTPUT]
 ```
 
 # DownloadYT
