@@ -14,16 +14,18 @@ def _parse_arguments():
     return parser.parse_args()
 
 
-def delay(path: str, delay: float = 1.0):
+def delay(path: str, delay: float = 1.0) -> str:
     path = Path(path)
     delay = float(delay)
     file, output = inout(path)
+    output = f'{output}_delayed_{int(delay)}{path.suffix}'
 
-    command = f'ffmpeg -i {file} -af "adelay={int(delay * 1000)}:all=true" {output}_delayed_{int(delay * 1000)}{path.suffix}'
+    command = f'ffmpeg -i {file} -af "adelay={int(delay * 1000)}:all=true" {output}'
     logging.info(command)
 
     # noinspection SubprocessShellMode
     subprocess.check_output(command, shell=True)
+    return output
 
 
 if __name__ == '__main__':

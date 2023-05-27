@@ -17,16 +17,18 @@ def _parse_arguments():
     return parser.parse_args()
 
 
-def atempo(path: str, rate: float = 25.0):
+def atempo(path: str, rate: float = 25.0) -> str:
     path = Path(path)
     file, output = inout(path)
+    output = f'{output}_out{path.suffix}'
     conversion = round(FRAME_RATE / float(rate), 8)
 
-    command = f'ffmpeg -i {file} -filter:a "atempo={conversion}" -vn {output}_out{path.suffix}'
+    command = f'ffmpeg -i {file} -filter:a "atempo={conversion}" -vn {output}'
     logging.info(command)
 
     # noinspection SubprocessShellMode
     subprocess.check_output(command, shell=True)
+    return output
 
 
 if __name__ == '__main__':

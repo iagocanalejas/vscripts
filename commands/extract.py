@@ -23,33 +23,31 @@ def _audio_format(path: str, track: int) -> str:
 
 
 def extract(path: str, track: int = 0):
-    errors = []
-    files = expand_path(path)
+    path = Path(path)
+    file, output = inout(path)
+    output = f'{output}.{_audio_format(file, track)}'
 
-    for file in files:
-        logging.info(f'{file=}')
+    command = f'ffmpeg -i {file} -map 0:a:{track} -c copy {output}'
+    logging.info(command)
 
-        path = Path(file)
-        file, output = inout(path)
-
-        command = f'ffmpeg -i {file} -map 0:a:{track} -c copy {output}.{_audio_format(file, track)}'
-        logging.info(command)
-
-        try:
-            # noinspection SubprocessShellMode
-            subprocess.check_output(command, shell=True)
-        except subprocess.CalledProcessError as e:
-            errors.append((file, e))
-
-    for file, _ in errors:
-        logging.error(f'errored {file=}')
+    # noinspection SubprocessShellMode
+    subprocess.check_output(command, shell=True)
+    return output
 
 
 if __name__ == '__main__':
     args = _parse_arguments()
     logging.info(f'{os.path.basename(__file__)}:: args -> {args.__dict__}')
 
-    extract(
-        path=args.path,
-        track=args.track,
-    )
+    errors = []
+    files = expand_path(args.path)
+
+    for file in files:
+        logging.info(f'{file=}')
+        try:
+            extract(path=file, track=args.track)
+        except subprocess.CalledProcessError as e:
+            errors.append((file, e))
+
+    for file, _ in errors:
+        logging.error(f'errored {file=}')

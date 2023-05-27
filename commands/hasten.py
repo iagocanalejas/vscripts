@@ -14,15 +14,17 @@ def _parse_arguments():
     return parser.parse_args()
 
 
-def hasten(path: str, hasten: float = 1.0):
+def hasten(path: str, hasten: float = 1.0) -> str:
     path = Path(path)
     file, output = inout(path)
+    output = f'{output}_hastened_{hasten}{path.suffix}'
 
-    command = f'ffmpeg -i {file} -ss {hasten} -acodec copy {output}_hastened_{hasten}{path.suffix}'
+    command = f'ffmpeg -i {file} -ss {hasten} -acodec copy {output}'
     logging.info(command)
 
     # noinspection SubprocessShellMode
     subprocess.check_output(command, shell=True)
+    return output
 
 
 if __name__ == '__main__':
