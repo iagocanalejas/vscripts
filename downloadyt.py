@@ -27,8 +27,6 @@ url_validator = re.compile(
 
 def main(file: str, out: str):
     global _PROCESSING, _QUEUE, _COMPLETED, _LAST_MODIFIED
-
-    _LAST_MODIFIED = os.path.getmtime(file)
     _check_changes(file)
 
     try:
