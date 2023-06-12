@@ -23,8 +23,8 @@ def _audio_format(path: str, track: int) -> str:
 
 
 def extract(path: str, track: int = 0):
-    path = Path(path)
-    file, output = inout(path)
+    ppath = Path(path)
+    file, output = inout(ppath)
     output = f'{output}.{_audio_format(file, track)}'
 
     command = f'ffmpeg -i {file} -map 0:a:{track} -c copy {output}'

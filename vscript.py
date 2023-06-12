@@ -3,19 +3,20 @@ import logging
 import os
 import sys
 
-from commands import atempo, delay, hasten, extract, append
+from commands import atempo, delay, hasten, extract, append, append_subs
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler(sys.stdout))
 
-COMMAND_ORDER = ['extract', 'atempo', 'delay', 'hasten', 'append']
+COMMAND_ORDER = ['extract', 'atempo', 'delay', 'hasten', 'append', 'subs']
 COMMANDS = {
     'atempo': atempo,
     'delay': delay,
     'hasten': hasten,
     'extract': extract,
     'append': append,
+    'subs': append_subs,
 }
 
 
@@ -44,13 +45,13 @@ if __name__ == '__main__':
     if any(k not in COMMAND_ORDER for k in actions.keys()):
         raise Exception(f'invalid command={next(k not in COMMANDS.keys() for k in actions.keys())}')
 
-    processing_file = args.path
+    og_file = processing_file = args.path
     for command in filter(lambda c: c in actions.keys(), COMMAND_ORDER):
         fn = COMMANDS[command]
         arg = actions[command]
 
         if command == 'append' and arg is None:
-            processing_file = fn(processing_file, processing_file)
+            processing_file = fn(og_file, processing_file)
             continue
         if arg is not None:
             processing_file = fn(processing_file, arg)

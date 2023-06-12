@@ -1,6 +1,7 @@
 import argparse
 import logging
 import os
+import shlex
 import subprocess
 from pathlib import Path
 
@@ -15,19 +16,42 @@ def _parse_arguments():
 
 
 def append(path: str, file: str) -> str:
-    path = Path(path)
-    target_file, output = inout(path)
-    output = f'{output}_out{path.suffix}'
+    ppath = Path(path)
+    input_file, output = inout(ppath)
+    output = f'{output}_out{ppath.suffix}'
 
     if not os.path.isfile(file):
         raise ValueError(f'invalid {file=}')
 
-    command = f'ffmpeg -i {target_file} -i {file} -map 0 -map 1 -c copy {output}'
+    extra_file = shlex.quote(file)
+    command = f'ffmpeg -i {input_file} -i {extra_file} -map 0 -map 1 -c copy {output}'
     logging.info(command)
 
     # noinspection SubprocessShellMode
     subprocess.check_output(command, shell=True)
     return output
+
+def append_subs(path: str, file: str) -> str:
+    ppath = Path(path)
+    input_file, output = inout(ppath)
+    output = f'{output}_subs.mkv'
+    subtitles_format = file.split('.')[-1].lower()
+
+    if not os.path.isfile(file):
+        raise ValueError(f'invalid {file=}')
+    if subtitles_format not in ['ass', 'srt', 'ssa']:
+        raise ValueError(f'invalid {subtitles_format=}')
+
+    subtitles_file = shlex.quote(file)
+    command = f"ffmpeg -i {input_file} -f {subtitles_format} -i {subtitles_file} " \
+            + f"-map 0:0 -map 0:1 -map 0:2 -map 1:0 -c:v copy -c:a copy -c:s {subtitles_format} " \
+            + f"-metadata:s:s:1 language=spa -disposition:s:1 default {output}"
+    logging.info(command)
+
+    # noinspection SubprocessShellMode
+    subprocess.check_output(command, shell=True)
+    return output
+
 
 
 if __name__ == '__main__':
