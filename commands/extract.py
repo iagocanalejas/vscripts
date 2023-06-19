@@ -5,7 +5,10 @@ import re
 import subprocess
 from pathlib import Path
 
-from commands._utils import inout, expand_path
+try:
+    from commands._utils import inout, expand_path
+except ImportError:
+    from _utils import inout, expand_path
 
 
 def _parse_arguments():
@@ -16,7 +19,8 @@ def _parse_arguments():
 
 
 def _audio_format(path: str, track: int) -> str:
-    probe_command = f'ffprobe -v error -select_streams a:{track} -show_entries stream=codec_name -of default=nokey=1:noprint_wrappers=1 {path}'
+    probe_command = f'ffprobe -v error -select_streams a:{track} ' \
+            + f'-show_entries stream=codec_name -of default=nokey=1:noprint_wrappers=1 {path}'
 
     # noinspection SubprocessShellMode
     return re.sub(r"\s", "", subprocess.check_output(probe_command, shell=True).decode("utf-8"), flags=re.UNICODE)

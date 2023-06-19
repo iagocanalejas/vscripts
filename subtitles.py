@@ -1,7 +1,6 @@
 import argparse
 import logging
 import os
-from pathlib import Path
 import sys
 from typing import List, Optional, Tuple
 
@@ -16,19 +15,28 @@ def _parse_arguments():
     parser.add_argument('path', help='path to be handled')
     return parser.parse_args()
 
-def _find_subs(root_path: str, file: str) -> Optional[str]:
-    path = Path(file)
+def _match_subs(root: str, file_path: str) -> Optional[str]:
+    file_name = os.path.basename(file_path)
 
     # find in current folder
-    for i in os.listdir(root_path):
-        maybe_match = os.path.join(root_path, i)
-        if os.path.isfile(maybe_match) and path.stem in i:
+    for i in os.listdir(root):
+        maybe_match = os.path.join(root, i)
+        _, extension = os.path.splitext(maybe_match)
+        if os.path.isfile(maybe_match) \
+                and extension in ['.ass', '.srt', '.ssa'] \
+                and file_name in i:
             return maybe_match
 
-    subs_folder = os.path.join(root_path, 'subs')
+    # find in 'subs' folder
+    subs_folder = os.path.join(root, 'subs')
+    if not os.path.exists(subs_folder):
+        return None
+
     for i in os.listdir(subs_folder):
         maybe_match = os.path.join(subs_folder, i)
-        if os.path.isfile(maybe_match) and path.stem in i:
+        print(maybe_match, file_name)
+        if os.path.isfile(maybe_match) \
+                and file_name in i:
             return maybe_match
 
     return None
@@ -40,8 +48,10 @@ if __name__ == '__main__':
     sub_pairs: List[Tuple[str, Optional[str]]] = []
     for i in os.listdir(args.path):
         maybe_file = os.path.join(args.path, i)
-        if os.path.isfile(maybe_file):
-            sub_pairs.append((maybe_file, _find_subs(args.path, maybe_file)))
+        file_name, extension = os.path.splitext(maybe_file)
+        if os.path.isfile(maybe_file) \
+                and extension in ['.mkv', '.mp4']:
+            sub_pairs.append((maybe_file, _match_subs(args.path, file_name)))
 
     for file, sub_file in sub_pairs:
         if not sub_file:

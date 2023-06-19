@@ -5,7 +5,10 @@ import shlex
 import subprocess
 from pathlib import Path
 
-from commands._utils import inout
+try:
+    from commands._utils import inout
+except ImportError:
+    from _utils import inout
 
 
 def _parse_arguments():
@@ -17,40 +20,40 @@ def _parse_arguments():
 
 def append(path: str, file: str) -> str:
     ppath = Path(path)
-    input_file, output = inout(ppath)
-    output = f'{output}_out{ppath.suffix}'
+    in_file, out_file = inout(ppath)
+    out_file = f'{out_file}_out{ppath.suffix}'
 
     if not os.path.isfile(file):
         raise ValueError(f'invalid {file=}')
 
     extra_file = shlex.quote(file)
-    command = f'ffmpeg -i {input_file} -i {extra_file} -map 0 -map 1 -c copy {output}'
+    command = f'ffmpeg -i {in_file} -i {extra_file} -map 0 -map 1 -c copy {out_file}'
     logging.info(command)
 
     # noinspection SubprocessShellMode
     subprocess.check_output(command, shell=True)
-    return output
+    return out_file
 
 def append_subs(path: str, file: str) -> str:
-    ppath = Path(path)
-    input_file, output = inout(ppath)
-    output = f'{output}_subs.mkv'
-    subtitles_format = file.split('.')[-1].lower()
+    in_file, out_file = inout(Path(path))
+    out_file = f'{out_file}_subs.mkv' if '.mkv' in in_file else f'{out_file}_subs.mp4'
+    in_subs_format = file.split('.')[-1].lower()
+    out_subs_format = in_subs_format if '.mkv' in in_file else 'mov_text'
 
     if not os.path.isfile(file):
         raise ValueError(f'invalid {file=}')
-    if subtitles_format not in ['ass', 'srt', 'ssa']:
-        raise ValueError(f'invalid {subtitles_format=}')
+    if in_subs_format not in ['ass', 'srt', 'ssa']:
+        raise ValueError(f'invalid {in_subs_format=}')
 
-    subtitles_file = shlex.quote(file)
-    command = f"ffmpeg -i {input_file} -f {subtitles_format} -i {subtitles_file} " \
-            + f"-map 0:0 -map 0:1 -map 0:2 -map 1:0 -c:v copy -c:a copy -c:s {subtitles_format} " \
-            + f"-metadata:s:s:1 language=spa -disposition:s:1 default {output}"
+    subs_file = shlex.quote(file)
+    command = f"ffmpeg -i {in_file} -f {in_subs_format} -i {subs_file} " \
+            + f"-map 0:0 -map 0:1 -map 0:2 -map 1:0 -c:v copy -c:a copy -c:s {out_subs_format} " \
+            + f"-metadata:s:s:1 language=spa -disposition:s:1 default {out_file}"
     logging.info(command)
 
     # noinspection SubprocessShellMode
     subprocess.check_output(command, shell=True)
-    return output
+    return out_file
 
 
 

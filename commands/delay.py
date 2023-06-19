@@ -4,7 +4,10 @@ import os
 import subprocess
 from pathlib import Path
 
-from commands._utils import inout
+try:
+    from commands._utils import inout
+except ImportError:
+    from _utils import inout
 
 
 def _parse_arguments():
@@ -15,10 +18,10 @@ def _parse_arguments():
 
 
 def delay(path: str, delay: float = 1.0) -> str:
-    path = Path(path)
+    ppath = Path(path)
     delay = float(delay)
-    file, output = inout(path)
-    output = f'{output}_delayed_{int(delay)}{path.suffix}'
+    file, output = inout(ppath)
+    output = f'{output}_delayed_{int(delay)}{ppath.suffix}'
 
     command = f'ffmpeg -i {file} -af "adelay={int(delay * 1000)}:all=true" {output}'
     logging.info(command)

@@ -4,7 +4,10 @@ import os
 import subprocess
 from pathlib import Path
 
-from commands._utils import inout
+try:
+    from commands._utils import inout
+except ImportError:
+    from _utils import inout
 
 
 def _parse_arguments():
@@ -15,9 +18,9 @@ def _parse_arguments():
 
 
 def hasten(path: str, hasten: float = 1.0) -> str:
-    path = Path(path)
-    file, output = inout(path)
-    output = f'{output}_hastened_{hasten}{path.suffix}'
+    ppath = Path(path)
+    file, output = inout(ppath)
+    output = f'{output}_hastened_{hasten}{ppath.suffix}'
 
     command = f'ffmpeg -i {file} -ss {hasten} -acodec copy {output}'
     logging.info(command)

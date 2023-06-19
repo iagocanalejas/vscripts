@@ -4,7 +4,10 @@ import os
 import subprocess
 from pathlib import Path
 
-from commands._utils import inout
+try:
+    from commands._utils import inout
+except ImportError:
+    from _utils import inout
 
 FRAME_RATE = 23.976024
 
@@ -18,9 +21,9 @@ def _parse_arguments():
 
 
 def atempo(path: str, rate: float = 25.0) -> str:
-    path = Path(path)
-    file, output = inout(path)
-    output = f'{output}_atempo{path.suffix}'
+    ppath = Path(path)
+    file, output = inout(ppath)
+    output = f'{output}_atempo{ppath.suffix}'
     conversion = round(FRAME_RATE / float(rate), 8)
 
     command = f'ffmpeg -i {file} -filter:a "atempo={conversion}" -vn {output}'
