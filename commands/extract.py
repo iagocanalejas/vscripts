@@ -6,9 +6,9 @@ import subprocess
 from pathlib import Path
 
 try:
-    from commands._utils import inout, expand_path
+    from commands._utils import expand_path, inout
 except ImportError:
-    from _utils import inout, expand_path
+    from _utils import expand_path, inout
 
 
 def _parse_arguments():

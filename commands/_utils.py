@@ -1,7 +1,7 @@
 import os
-from typing import Tuple, List
-from pathlib import Path
 import shlex
+from pathlib import Path
+from typing import List, Tuple
 
 
 def inout(path: Path) -> Tuple[str, str]:
@@ -18,4 +18,6 @@ def expand_path(path: str, valid_files: List[str] | None = None) -> List[str]:
         _, extension = os.path.splitext(file)
         return extension.upper() in valid_files
 
-    return [os.path.abspath(os.path.join(dp, f)) for dp, _, filenames in os.walk(path) for f in filenames if is_valid(f)]
+    return [
+        os.path.abspath(os.path.join(dp, f)) for dp, _, filenames in os.walk(path) for f in filenames if is_valid(f)
+    ]
