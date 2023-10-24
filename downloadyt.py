@@ -7,16 +7,15 @@ import os
 import re
 import sys
 import time
-from typing import List, Optional
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler(sys.stdout))
 
-_QUEUE: List[str] = []
-_PROCESSING: Optional[str] = None
-_COMPLETED: List[str] = []
-_LAST_MODIFIED: Optional[float] = None
+_QUEUE: list[str] = []
+_PROCESSING: str | None = None
+_COMPLETED: list[str] = []
+_LAST_MODIFIED: float | None = None
 
 url_validator = re.compile(
     r"^(?:http|ftp)s?://"  # http:// or https://

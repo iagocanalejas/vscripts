@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 
 import argparse
+import json
 import logging
 import os
 import sys
+from pathlib import Path
 
-from commands import append, append_subs, atempo, delay, extract, hasten
+from vscripts.commands import append, append_subs, atempo, delay, extract, hasten
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler(sys.stdout))
+
 
 COMMAND_ORDER = ["extract", "atempo", "delay", "hasten", "append", "subs"]
 COMMANDS = {
@@ -20,6 +23,25 @@ COMMANDS = {
     "append": append,
     "subs": append_subs,
 }
+
+
+def main(path_name: str, actions: dict[str, str]):
+    path = Path(path_name).absolute()
+    og_file = Path(path_name).absolute()
+    assert path.is_file()
+
+    for command in filter(lambda c: c in actions.keys(), COMMAND_ORDER):
+        fn = COMMANDS[command]
+        arg = actions[command]
+
+        if command == "append" and arg is None:
+            # condition when we append a file at the end of a command queue
+            path = fn(path, into=og_file)
+            continue
+        if arg is not None:
+            path = fn(path, arg)
+            continue
+        path = fn(path)
 
 
 def _parse_arguments():
@@ -42,20 +64,9 @@ def _parse_arguments():
 if __name__ == "__main__":
     args, actions = _parse_arguments()
     logger.info(f"{os.path.basename(__file__)}:: args -> {args.__dict__}")
-    logger.info(f"{os.path.basename(__file__)}:: actions -> {actions}")
+    logger.info(f"{json.dumps(actions, indent=4, skipkeys=True, ensure_ascii=False)}")
 
     if any(k not in COMMAND_ORDER for k in actions.keys()):
         raise Exception(f"invalid command={next(k not in COMMANDS.keys() for k in actions.keys())}")
 
-    og_file = processing_file = args.path
-    for command in filter(lambda c: c in actions.keys(), COMMAND_ORDER):
-        fn = COMMANDS[command]
-        arg = actions[command]
-
-        if command == "append" and arg is None:
-            processing_file = fn(og_file, processing_file)
-            continue
-        if arg is not None:
-            processing_file = fn(processing_file, arg)
-            continue
-        processing_file = fn(processing_file)
+    main(args.path, actions)

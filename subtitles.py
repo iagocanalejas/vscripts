@@ -4,9 +4,9 @@ import argparse
 import logging
 import os
 import sys
-from typing import List, Optional, Tuple
+from pathlib import Path
 
-from commands import append_subs
+from vscripts.commands import append_subs
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -14,7 +14,7 @@ logger.addHandler(logging.StreamHandler(sys.stdout))
 
 
 def main(directory_path: str):
-    sub_pairs: List[Tuple[str, Optional[str]]] = []
+    sub_pairs: list[tuple[str, str | None]] = []
 
     # file_by_file processing
     for file in [f for f in os.listdir(directory_path) if os.path.isfile(os.path.join(directory_path, f))]:
@@ -29,10 +29,10 @@ def main(directory_path: str):
             continue
 
         logger.info(f"appending {sub_file=} to {file=}")
-        append_subs(file, sub_file)
+        append_subs(Path(sub_file), into=Path(file))
 
 
-def _match_subs(directory: str, file_name: str, is_subs=False) -> Optional[str]:
+def _match_subs(directory: str, file_name: str, is_subs=False) -> str | None:
     """
     Search for matching subtitle files in a directory.
 
