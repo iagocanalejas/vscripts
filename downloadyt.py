@@ -54,12 +54,11 @@ async def download_to(url: str, output_folder: str):
     logger.info(f"processing {url=}")
     _PROCESSING = url
 
-    command = ["yt-dlp", "--prefer-ffmpeg", _PROCESSING, "-P", output_folder]
+    command = ["yt-dlp", "--progress", "--prefer-ffmpeg", _PROCESSING, "-P", output_folder]
 
     process = await asyncio.create_subprocess_exec(
         *command,
         limit=1024 * 2048,  # allows to download 2GB files
-        stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.STDOUT,
     )
 
