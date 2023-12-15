@@ -5,7 +5,7 @@ import subprocess
 from pathlib import Path
 
 from .constants import FRAME_RATE
-from .utils import retrieve_audio_format
+from .utils import retrieve_audio_format, retrieve_number_of_subtitle_tracks
 
 
 def append(file: Path, into: Path) -> Path:
@@ -35,7 +35,7 @@ def append(file: Path, into: Path) -> Path:
     return output_path
 
 
-def append_subs(file: Path, into: Path) -> Path:
+def append_subs(subs_file: Path, into: Path) -> Path:
     """
     Append subtitles to a video file using FFmpeg and save it as a new file.
 
@@ -48,17 +48,15 @@ def append_subs(file: Path, into: Path) -> Path:
     workspace, file_name, file_extension = into.parent, into.stem, into.suffix
     output_path = workspace.joinpath(f"{file_name}_subs{'.mkv' if 'mkv' in file_extension else '.mp4'}")
 
-    input_subs_format = file.suffix.replace(".", "")
-    output_subs_format = "mkv" if "mkv" in input_subs_format else "mov_text"
-
-    input_file = shlex.quote(str(into))
-    subtitles_file = shlex.quote(str(file))
+    original_file = shlex.quote(str(into))
+    subtitles_file = shlex.quote(str(subs_file))
     output_file = shlex.quote(str(output_path))
 
+    subtitle_tracks = retrieve_number_of_subtitle_tracks(original_file)
+
     command = (
-        f"ffmpeg -i {input_file} -f {input_subs_format} -i {subtitles_file} "
-        + f"-map 0:0 -map 0:1 -map 0:2 -map 1:0 -c:v copy -c:a copy -c:s {output_subs_format} "
-        + f"-metadata:s:s:1 language=spa -disposition:s:1 default {output_file}"
+        f"ffmpeg -i {original_file} -i {subtitles_file} -map 0 -map 1 -c copy"
+        + f" -metadata:s:s:{subtitle_tracks} language=spa {output_file}"
     )
     logging.info(command)
 
@@ -66,7 +64,7 @@ def append_subs(file: Path, into: Path) -> Path:
     return output_path
 
 
-def atempo(target: Path, rate: float = 25.0) -> Path:
+def atempo(file: Path, rate: float = 25.0) -> Path:
     """
     Change the playback speed of an audio or video file using FFmpeg and save the result as a new file.
 
@@ -76,10 +74,10 @@ def atempo(target: Path, rate: float = 25.0) -> Path:
 
     Returns: The path to the newly created file with the adjusted playback speed.
     """
-    workspace, file_name, file_extension = target.parent, target.stem, target.suffix
+    workspace, file_name, file_extension = file.parent, file.stem, file.suffix
     output_path = workspace.joinpath(f"{file_name}_atempo{file_extension}")
 
-    input_file = shlex.quote(str(target))
+    input_file = shlex.quote(str(file))
     output_file = shlex.quote(str(output_path))
     conversion = round(FRAME_RATE / float(rate), 8)
 

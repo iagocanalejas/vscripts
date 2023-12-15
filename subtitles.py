@@ -20,7 +20,7 @@ def main(directory_path: str):
     for file in [f for f in os.listdir(directory_path) if os.path.isfile(os.path.join(directory_path, f))]:
         file_name, extension = os.path.splitext(file)
         if extension in [".mkv", ".mp4"]:
-            sub_pairs.append((file, _match_subs(directory_path, file_name)))
+            sub_pairs.append((os.path.join(directory_path, file), _match_subs(directory_path, file_name)))
 
     # append found subtitles
     for file, sub_file in sub_pairs:
