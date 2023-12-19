@@ -28,14 +28,14 @@ def append(file: Path, into: Path) -> Path:
     appended_file = shlex.quote(str(file))
     output_file = shlex.quote(str(output_path))
 
-    command = f"ffmpeg -i {input_file} -i {appended_file} -map 0 -map 1 " + f"-c copy {output_file}"
+    command = f"ffmpeg -i {input_file} -i {appended_file} -map 0 -map 1 -c copy {output_file}"
     logging.info(command)
 
     subprocess.check_output(command, shell=True)
     return output_path
 
 
-def append_subs(subs_file: Path, into: Path) -> Path:
+def append_subs(subs_file: Path, into: Path, lang: str = "spa") -> Path:
     """
     Append subtitles to a video file using FFmpeg and save it as a new file.
 
@@ -56,7 +56,8 @@ def append_subs(subs_file: Path, into: Path) -> Path:
 
     command = (
         f"ffmpeg -i {original_file} -i {subtitles_file} -map 0 -map 1 -c copy"
-        + f" -metadata:s:s:{subtitle_tracks} language=spa {output_file}"
+        + f" -metadata:s:s:{subtitle_tracks} language={lang} {'-scodec mov_text ' if 'mp4' in file_extension else ''}"
+        + f" {output_file}"
     )
     logging.info(command)
 

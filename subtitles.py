@@ -13,7 +13,7 @@ logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler(sys.stdout))
 
 
-def main(directory_path: str):
+def main(directory_path: str, lang: str):
     sub_pairs: list[tuple[str, str | None]] = []
 
     # file_by_file processing
@@ -29,7 +29,7 @@ def main(directory_path: str):
             continue
 
         logger.info(f"appending {sub_file=} to {file=}")
-        append_subs(Path(sub_file), into=Path(file))
+        append_subs(Path(sub_file), into=Path(file), lang=lang)
 
 
 def _match_subs(directory: str, file_name: str, is_subs=False) -> str | None:
@@ -64,6 +64,7 @@ def _match_subs(directory: str, file_name: str, is_subs=False) -> str | None:
 def _parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument("path", help="path to be handled")
+    parser.add_argument("-l", "--lang", type=str, default="spa", help="subtitles language")
     return parser.parse_args()
 
 
@@ -71,4 +72,4 @@ if __name__ == "__main__":
     args = _parse_arguments()
     logger.info(f"{os.path.basename(__file__)}:: args -> {args.__dict__}")
 
-    main(args.path)
+    main(args.path, args.lang)
