@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 from vscripts.commands import append, append_subs, atempo, delay, extract, hasten
+from vscripts.constants import FRAME_RATE
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -54,6 +55,8 @@ def _parse_arguments():
     for action in parsed.actions:
         if "=" in action:
             a, v = action.split("=")
+            if a == "atempo":
+                v = tuple(float(t) for t in v.split(",")) if "," in v else (v, FRAME_RATE)
             todo[a] = v
         else:
             todo[action] = None

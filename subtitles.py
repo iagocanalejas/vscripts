@@ -51,7 +51,7 @@ def _match_subs(directory: str, file_name: str, is_subs=False) -> str | None:
 
     for file in [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]:
         _, extension = os.path.splitext(file)
-        if extension in [".ass", ".srt", ".ssa"] and file_name in file:
+        if extension in [".ass", ".srt", ".ssa", ".mks"] and file_name in file:
             return os.path.join(directory, file)
 
     if is_subs:
