@@ -65,13 +65,13 @@ def append_subs(subs_file: Path, into: Path, lang: str = "spa") -> Path:
     return output_path
 
 
-def atempo(file: Path, rate: tuple[float, float] = (ES_RATE, FRAME_RATE)) -> Path:
+def atempo(file: Path, rates: tuple[float, float] = (ES_RATE, FRAME_RATE)) -> Path:
     """
     Change the playback speed of an audio or video file using FFmpeg and save the result as a new file.
 
     Args:
         target (Path): The path to the audio or video file to be processed.
-        rate (tuple[float, float], optional): The conversion rates (from, to).
+        rate (tuple[float, float], optional): The conversion rates in the format (from_rate, to_rate).
 
     Returns: The path to the newly created file with the adjusted playback speed.
     """
@@ -80,9 +80,32 @@ def atempo(file: Path, rate: tuple[float, float] = (ES_RATE, FRAME_RATE)) -> Pat
 
     input_file = shlex.quote(str(file))
     output_file = shlex.quote(str(output_path))
-    conversion = round(rate[1] / float(rate[0]), 8)
+    conversion = round(rates[1] / float(rates[0]), 8)
 
     command = f'ffmpeg -i {input_file} -filter:a "atempo={conversion}" -vn {output_file}'
+    logging.info(command)
+
+    subprocess.check_output(command, shell=True)
+    return output_path
+
+
+def atempo_video(file: Path, rate: float = FRAME_RATE) -> Path:
+    """
+    Change the playback speed of a video file using FFmpeg and save the result as a new file.
+
+    Args:
+        file (Path): The path to the video file to be processed.
+        rate (float, optional): The conversion rate.
+
+    Returns: The path to the newly created file with the adjusted playback speed.
+    """
+    workspace, file_name, file_extension = file.parent, file.stem, file.suffix
+    output_path = workspace.joinpath(f"{file_name}_atempo-video{file_extension}")
+
+    input_file = shlex.quote(str(file))
+    output_file = shlex.quote(str(output_path))
+
+    command = f'ffmpeg -i {input_file} -r {rate} -an -sn {output_file}'
     logging.info(command)
 
     subprocess.check_output(command, shell=True)

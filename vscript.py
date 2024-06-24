@@ -7,7 +7,7 @@ import os
 import sys
 from pathlib import Path
 
-from vscripts.commands import append, append_subs, atempo, delay, extract, hasten
+from vscripts.commands import append, append_subs, atempo, atempo_video, delay, extract, hasten
 from vscripts.constants import FRAME_RATE
 
 logger = logging.getLogger()
@@ -15,9 +15,10 @@ logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler(sys.stdout))
 
 
-COMMAND_ORDER = ["extract", "atempo", "delay", "hasten", "append", "subs"]
+COMMAND_ORDER = ["extract", "atempo", "atempo-video", "delay", "hasten", "append", "subs"]
 COMMANDS = {
     "atempo": atempo,
+    "atempo-video": atempo_video,
     "delay": delay,
     "hasten": hasten,
     "extract": extract,
