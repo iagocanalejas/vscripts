@@ -4,8 +4,8 @@ import shlex
 import subprocess
 from pathlib import Path
 
-from .constants import ES_RATE, FRAME_RATE
-from .utils import retrieve_audio_format, retrieve_number_of_subtitle_tracks
+from .constants import NTSC_RATE, PAL_RATE
+from .utils import retrieve_audio_format, retrieve_audio_language, retrieve_number_of_subtitle_tracks
 
 
 def append(file: Path, into: Path) -> Path:
@@ -65,7 +65,7 @@ def append_subs(subs_file: Path, into: Path, lang: str = "spa") -> Path:
     return output_path
 
 
-def atempo(file: Path, rates: tuple[float, float] = (ES_RATE, FRAME_RATE)) -> Path:
+def atempo(file: Path, rates: tuple[float, float] = (PAL_RATE, NTSC_RATE)) -> Path:
     """
     Change the playback speed of an audio or video file using FFmpeg and save the result as a new file.
 
@@ -89,7 +89,7 @@ def atempo(file: Path, rates: tuple[float, float] = (ES_RATE, FRAME_RATE)) -> Pa
     return output_path
 
 
-def atempo_video(file: Path, rate: float = FRAME_RATE) -> Path:
+def atempo_video(file: Path, rate: float = NTSC_RATE) -> Path:
     """
     Change the playback speed of a video file using FFmpeg and save the result as a new file.
 
@@ -105,7 +105,7 @@ def atempo_video(file: Path, rate: float = FRAME_RATE) -> Path:
     input_file = shlex.quote(str(file))
     output_file = shlex.quote(str(output_path))
 
-    command = f'ffmpeg -i {input_file} -r {rate} -an -sn {output_file}'
+    command = f"ffmpeg -i {input_file} -r {rate} -an -sn {output_file}"
     logging.info(command)
 
     subprocess.check_output(command, shell=True)
@@ -147,7 +147,12 @@ def extract(file: Path, track: int = 0) -> Path:
     Returns: The path to the newly created audio file containing the extracted audio track.
     """
     workspace, file_name = file.parent, file.stem
-    output_path = workspace.joinpath(f"{file_name}.{retrieve_audio_format(shlex.quote(str(file)), track)}")
+    audio_language = retrieve_audio_language(shlex.quote(str(file)), track)
+    audio_format = retrieve_audio_format(shlex.quote(str(file)), track)
+    output_path = workspace.joinpath(f"{file_name}_{audio_language}.{audio_format}")
+
+    if os.path.isfile(output_path):
+        return output_path
 
     input_file = shlex.quote(str(file))
     output_file = shlex.quote(str(output_path))

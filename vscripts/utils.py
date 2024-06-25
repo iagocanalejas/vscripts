@@ -9,6 +9,14 @@ def retrieve_audio_format(file_path: str, track: int) -> str:
     return subprocess.check_output(command, shell=True, stderr=subprocess.PIPE, text=True).strip()
 
 
+def retrieve_audio_language(file_path: str, track: int) -> str:
+    command = (
+        f"ffprobe -v error -select_streams a:{track} -show_entries stream_tags=language -of "
+        + f"default=noprint_wrappers=1:nokey=1 {file_path}"
+    )
+    return subprocess.check_output(command, shell=True, stderr=subprocess.PIPE, text=True).strip()[:2]
+
+
 def retrieve_number_of_subtitle_tracks(file_path) -> int:
     command = f"ffprobe -i {file_path} -show_entries stream=index,codec_type:stream_tags=language -v quiet -of csv=p=0"
     output = subprocess.check_output(command, shell=True, stderr=subprocess.PIPE, text=True).strip()

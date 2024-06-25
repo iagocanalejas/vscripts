@@ -7,32 +7,23 @@ import os
 import sys
 from pathlib import Path
 
-from vscripts.commands import append, append_subs, atempo, atempo_video, delay, extract, hasten
-from vscripts.constants import FRAME_RATE
+from vscripts import COMMAND_ORDER, COMMANDS
+from vscripts.constants import NTSC_RATE
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler(sys.stdout))
 
 
-COMMAND_ORDER = ["extract", "atempo", "atempo-video", "delay", "hasten", "append", "subs"]
-COMMANDS = {
-    "atempo": atempo,
-    "atempo-video": atempo_video,
-    "delay": delay,
-    "hasten": hasten,
-    "extract": extract,
-    "append": append,
-    "subs": append_subs,
-}
-
-
 def main(path_name: str, actions: dict[str, str]):
     path = Path(path_name).absolute()
     og_file = Path(path_name).absolute()
+    intermediate_files: list[Path] = []
     assert path.is_file()
 
     for command in filter(lambda c: c in actions.keys(), COMMAND_ORDER):
+        intermediate_files.append(path)
+
         fn = COMMANDS[command]
         arg = actions[command]
 
@@ -44,6 +35,10 @@ def main(path_name: str, actions: dict[str, str]):
             path = fn(path, arg)
             continue
         path = fn(path)
+
+    for f in intermediate_files:
+        if f != og_file:
+            f.unlink()
 
 
 def _parse_arguments():
@@ -57,7 +52,7 @@ def _parse_arguments():
         if "=" in action:
             a, v = action.split("=")
             if a == "atempo":
-                v = tuple(float(t) for t in v.split(",")) if "," in v else (v, FRAME_RATE)
+                v = tuple(float(t) for t in v.split(",")) if "," in v else (v, NTSC_RATE)
             todo[a] = v
         else:
             todo[action] = None
