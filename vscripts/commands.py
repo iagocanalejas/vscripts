@@ -1,11 +1,10 @@
 import logging
 import os
-import shlex
 import subprocess
 from pathlib import Path
 
 from .constants import NTSC_RATE, PAL_RATE
-from .utils import retrieve_audio_format, retrieve_audio_language, retrieve_number_of_subtitle_tracks
+from .streams import AudioStream, SubtitleStream
 
 
 def append(file: Path, into: Path) -> Path:
@@ -24,14 +23,10 @@ def append(file: Path, into: Path) -> Path:
     if not os.path.isfile(file):
         raise ValueError(f"invalid {file=}")
 
-    input_file = shlex.quote(str(into))
-    appended_file = shlex.quote(str(file))
-    output_file = shlex.quote(str(output_path))
-
-    command = f"ffmpeg -i {input_file} -i {appended_file} -map 0 -map 1 -c copy {output_file}"
+    command = ["ffmpeg", "-i", str(into), "-i", str(file), "-map", "0", "-map", "1", "-c", "copy", str(output_path)]
     logging.info(command)
 
-    subprocess.check_output(command, shell=True)
+    subprocess.run(command, text=True)
     return output_path
 
 
@@ -48,20 +43,27 @@ def append_subs(subs_file: Path, into: Path, lang: str = "spa") -> Path:
     workspace, file_name, file_extension = into.parent, into.stem, into.suffix
     output_path = workspace.joinpath(f"{file_name}_subs{'.mkv' if 'mkv' in file_extension else '.mp4'}")
 
-    original_file = shlex.quote(str(into))
-    subtitles_file = shlex.quote(str(subs_file))
-    output_file = shlex.quote(str(output_path))
-
-    subtitle_tracks = retrieve_number_of_subtitle_tracks(original_file)
-
-    command = (
-        f"ffmpeg -i {original_file} -i {subtitles_file} -map 0 -map 1 -c copy"
-        + f" -metadata:s:s:{subtitle_tracks} language={lang} {'-scodec mov_text ' if 'mp4' in file_extension else ''}"
-        + f" {output_file}"
-    )
+    command = [
+        "ffmpeg",
+        "-i",
+        str(into),
+        "-i",
+        str(subs_file),
+        "-map",
+        "0",
+        "-map",
+        "1",
+        "-c",
+        "copy",
+        f"-metadata:s:s:{len(SubtitleStream.from_file(str(into)))}",
+        f"language={lang}",
+        "-scodec",
+        "mov_text" if "mp4" in file_extension else "",
+        str(output_path),
+    ]
     logging.info(command)
 
-    subprocess.check_output(command, shell=True)
+    subprocess.run(command, text=True)
     return output_path
 
 
@@ -78,14 +80,11 @@ def atempo(file: Path, rates: tuple[float, float] = (PAL_RATE, NTSC_RATE)) -> Pa
     workspace, file_name, file_extension = file.parent, file.stem, file.suffix
     output_path = workspace.joinpath(f"{file_name}_atempo{file_extension}")
 
-    input_file = shlex.quote(str(file))
-    output_file = shlex.quote(str(output_path))
-    conversion = round(rates[1] / float(rates[0]), 8)
-
-    command = f'ffmpeg -i {input_file} -filter:a "atempo={conversion}" -vn {output_file}'
+    conversion = round(float(rates[1]) / float(rates[0]), 8)
+    command = ["ffmpeg", "-i", str(file), "-filter:a", f"atempo={conversion}", "-vn", str(output_path)]
     logging.info(command)
 
-    subprocess.check_output(command, shell=True)
+    subprocess.run(command, text=True)
     return output_path
 
 
@@ -102,13 +101,10 @@ def atempo_video(file: Path, rate: float = NTSC_RATE) -> Path:
     workspace, file_name, file_extension = file.parent, file.stem, file.suffix
     output_path = workspace.joinpath(f"{file_name}_atempo-video{file_extension}")
 
-    input_file = shlex.quote(str(file))
-    output_file = shlex.quote(str(output_path))
-
-    command = f"ffmpeg -i {input_file} -r {rate} -an -sn {output_file}"
+    command = ["ffmpeg", "-i", str(file), "-r", f"{rate}", "-an", "-sn", str(output_path)]
     logging.info(command)
 
-    subprocess.check_output(command, shell=True)
+    subprocess.run(command, text=True)
     return output_path
 
 
@@ -125,14 +121,10 @@ def delay(file: Path, delay: float = 1.0) -> Path:
     workspace, file_name, file_extension = file.parent, file.stem, file.suffix
     output_path = workspace.joinpath(f"{file_name}_delayed_{delay}{file_extension}")
 
-    input_file = shlex.quote(str(file))
-    output_file = shlex.quote(str(output_path))
-    delay = int(float(delay) * 1000)
-
-    command = f'ffmpeg -i {input_file} -af "adelay={delay}:all=true" {output_file}'
+    command = ["ffmpeg", "-i", str(file), "-af", f"adelay={int(float(delay) * 1000)}:all=true", str(output_path)]
     logging.info(command)
 
-    subprocess.check_output(command, shell=True)
+    subprocess.run(command, text=True)
     return output_path
 
 
@@ -147,20 +139,18 @@ def extract(file: Path, track: int = 0) -> Path:
     Returns: The path to the newly created audio file containing the extracted audio track.
     """
     workspace, file_name = file.parent, file.stem
-    audio_language = retrieve_audio_language(shlex.quote(str(file)), track)
-    audio_format = retrieve_audio_format(shlex.quote(str(file)), track)
-    output_path = workspace.joinpath(f"{file_name}_{audio_language}.{audio_format}")
+    audio_stream = AudioStream.from_file_stream(str(file), track)
+    audio_language = audio_stream.tags.get("language", "unk")
+    output_path = workspace.joinpath(f"{file_name}_{audio_language}.{audio_stream.codec_name}")
 
     if os.path.isfile(output_path):
+        logging.debug(f"skipping {output_path=} as it already exists")
         return output_path
 
-    input_file = shlex.quote(str(file))
-    output_file = shlex.quote(str(output_path))
-
-    command = f"ffmpeg -i {input_file} -map 0:a:{track} -c copy {output_file}"
+    command = ["ffmpeg", "-i", str(file), "-map", f"0:a:{track}", "-c", "copy", str(output_path)]
     logging.info(command)
 
-    subprocess.check_output(command, shell=True)
+    subprocess.run(command, text=True)
     return output_path
 
 
@@ -177,11 +167,8 @@ def hasten(file: Path, hasten: float = 1.0) -> Path:
     workspace, file_name, file_extension = file.parent, file.stem, file.suffix
     output_path = workspace.joinpath(f"{file_name}_hastened_{hasten}{file_extension}")
 
-    input_file = shlex.quote(str(file))
-    output_file = shlex.quote(str(output_path))
-
-    command = f"ffmpeg -i {input_file} -ss {hasten} -acodec copy {output_file}"
+    command = ["ffmpeg", "-i", str(file), "-ss", f"{hasten}", "-acodec", "copy", str(output_path)]
     logging.info(command)
 
-    subprocess.check_output(command, shell=True)
+    subprocess.run(command, text=True)
     return output_path

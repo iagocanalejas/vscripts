@@ -6,28 +6,28 @@ import logging
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
-from vscripts import COMMAND_ORDER, COMMANDS
-from vscripts.constants import NTSC_RATE
+from vscripts import COMMAND_APPEND, COMMAND_ATEMPO, COMMANDS, NTSC_RATE
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler(sys.stdout))
 
 
-def main(path_name: str, actions: dict[str, str]):
+def main(path_name: str, actions: dict[str, Any], queue: list[str]):
     path = Path(path_name).absolute()
     og_file = Path(path_name).absolute()
     intermediate_files: list[Path] = []
     assert path.is_file()
 
-    for command in filter(lambda c: c in actions.keys(), COMMAND_ORDER):
+    for command in queue:
         intermediate_files.append(path)
 
         fn = COMMANDS[command]
         arg = actions[command]
 
-        if command == "append" and arg is None:
+        if command == COMMAND_APPEND and arg is None:
             # condition when we append a file at the end of a command queue
             path = fn(path, into=og_file)
             continue
@@ -47,25 +47,29 @@ def _parse_arguments():
     parser.add_argument("actions", type=str, nargs="*", help="list of actions to be ran")
     parsed = parser.parse_args()
 
-    todo = {}
+    todo: dict[str, Any] = {}
+    order: list[str] = []
     for action in parsed.actions:
         if "=" in action:
             a, v = action.split("=")
-            if a == "atempo":
+            if a == COMMAND_ATEMPO:
                 v = tuple(float(t) for t in v.split(",")) if "," in v else (v, NTSC_RATE)
             todo[a] = v
+            order.append(a)
         else:
             todo[action] = None
+            order.append(action)
 
-    return parsed, todo
+    return parsed, todo, order
 
 
 if __name__ == "__main__":
-    args, actions = _parse_arguments()
+    args, actions, queue = _parse_arguments()
     logger.info(f"{os.path.basename(__file__)}:: args -> {args.__dict__}")
     logger.info(f"{json.dumps(actions, indent=4, skipkeys=True, ensure_ascii=False)}")
 
-    if any(k not in COMMAND_ORDER for k in actions.keys()):
+    if any(k not in COMMANDS.keys() for k in actions.keys()):
         raise Exception(f"invalid command={next(k not in COMMANDS.keys() for k in actions.keys())}")
+    # TODO: validate queue is sorted
 
-    main(args.path, actions)
+    main(args.path, actions, queue)

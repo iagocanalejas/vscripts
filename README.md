@@ -6,6 +6,7 @@ Run a series of commands to a given file.
 python vscript.py <path>
     extract[=0]
     atempo[=25.0]
+	atempo-video[=23.976]
     delay[=1.0]
     hasten[=1.0]
     append[=LAST_OUTPUT]
@@ -29,32 +30,4 @@ For each file in <path> tries to find the matching subtitle file in <path> and i
 
 ```sh
 python subtitles.py <path>
-```
-
-# Commands
-
-Individual callable commands
-
-### Extract
-
-```sh
-python extract.py <path> --track=0 (int)
-```
-
-### Atempo
-
-```sh
-python atempo.py <path> --rate=25.0 (float)
-```
-
-### Delay
-
-```sh
-python delay.py <path> --delay=1.0 (float)
-```
-
-### Hasten
-
-```sh
-python hasten.py <path> --hasten=1.0 (float)
 ```

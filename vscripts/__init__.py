@@ -8,13 +8,31 @@ from .commands import (
     hasten as hasten,
 )
 
-COMMAND_ORDER = ["extract", "atempo", "atempo-video", "delay", "hasten", "append", "subs"]
+from .streams import (
+    VideoStream as VideoStream,
+    AudioStream as AudioStream,
+    SubtitleStream as SubtitleStream,
+)
+
+from .constants import (
+    COMMAND_APPEND as COMMAND_APPEND,
+    COMMAND_APPEND_SUBS as COMMAND_APPEND_SUBS,
+    COMMAND_ATEMPO as COMMAND_ATEMPO,
+    COMMAND_ATEMPO_VIDEO as COMMAND_ATEMPO_VIDEO,
+    COMMAND_DELAY as COMMAND_DELAY,
+    COMMAND_EXTRACT as COMMAND_EXTRACT,
+    COMMAND_HASTEN as COMMAND_HASTEN,
+    NTSC_BROADCAST_RATE as NTSC_BROADCAST_RATE,
+    NTSC_RATE as NTSC_RATE,
+    PAL_RATE as PAL_RATE,
+)
+
 COMMANDS = {
-    "atempo": atempo,
-    "atempo-video": atempo_video,
-    "delay": delay,
-    "hasten": hasten,
-    "extract": extract,
-    "append": append,
-    "subs": append_subs,
+    COMMAND_ATEMPO: atempo,
+    COMMAND_ATEMPO_VIDEO: atempo_video,
+    COMMAND_DELAY: delay,
+    COMMAND_HASTEN: hasten,
+    COMMAND_EXTRACT: extract,
+    COMMAND_APPEND: append,
+    COMMAND_APPEND_SUBS: append_subs,
 }
