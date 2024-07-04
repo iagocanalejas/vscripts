@@ -1,11 +1,13 @@
 import json
 import subprocess
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta
 
 
 @dataclass
 class VideoStream:
     index: int
+    duration: str
     codec_name: str | None = None
     codec_long_name: str | None = None
     profile: str | None = None
@@ -39,7 +41,6 @@ class VideoStream:
     start_pts: int | None = None
     start_time: str | None = None
     duration_ts: int | None = None
-    duration: str | None = None
     bit_rate: str | None = None
     max_bit_rate: str | None = None
     bits_per_raw_sample: int | None = None
@@ -49,6 +50,17 @@ class VideoStream:
 
     @classmethod
     def from_dict(cls, data: dict) -> "VideoStream":
+        duration = data.get("duration", None)
+        if not duration and "DURATION" in data.get("tags", {}).keys():
+            duration_time = data["tags"]["DURATION"]
+            time_obj = datetime.strptime(duration_time[:15], "%H:%M:%S.%f")
+            duration = f"{timedelta(
+                hours=time_obj.hour,
+                minutes=time_obj.minute,
+                seconds=time_obj.second,
+                microseconds=time_obj.microsecond,
+            ).total_seconds()}"
+
         return VideoStream(
             index=data.get("index", None),
             codec_name=data.get("codec_name"),
@@ -84,7 +96,7 @@ class VideoStream:
             start_pts=data.get("start_pts"),
             start_time=data.get("start_time"),
             duration_ts=data.get("duration_ts"),
-            duration=data.get("duration"),
+            duration=duration,
             bit_rate=data.get("bit_rate"),
             max_bit_rate=data.get("max_bit_rate"),
             bits_per_raw_sample=data.get("bits_per_raw_sample"),

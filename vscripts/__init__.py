@@ -2,6 +2,7 @@ from .commands import (
     append as append,
     append_subs as append_subs,
     atempo as atempo,
+    atempo_with as atempo_with,
     atempo_video as atempo_video,
     delay as delay,
     extract as extract,
@@ -19,6 +20,7 @@ from .constants import (
     COMMAND_APPEND_SUBS as COMMAND_APPEND_SUBS,
     COMMAND_ATEMPO as COMMAND_ATEMPO,
     COMMAND_ATEMPO_VIDEO as COMMAND_ATEMPO_VIDEO,
+    COMMAND_ATEMPO_WITH,
     COMMAND_DELAY as COMMAND_DELAY,
     COMMAND_EXTRACT as COMMAND_EXTRACT,
     COMMAND_HASTEN as COMMAND_HASTEN,
@@ -29,6 +31,7 @@ from .constants import (
 
 COMMANDS = {
     COMMAND_ATEMPO: atempo,
+    COMMAND_ATEMPO_WITH: atempo_with,
     COMMAND_ATEMPO_VIDEO: atempo_video,
     COMMAND_DELAY: delay,
     COMMAND_HASTEN: hasten,

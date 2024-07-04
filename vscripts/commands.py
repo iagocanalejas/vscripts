@@ -77,11 +77,23 @@ def atempo(file: Path, rates: tuple[float, float] = (PAL_RATE, NTSC_RATE)) -> Pa
 
     Returns: The path to the newly created file with the adjusted playback speed.
     """
-    workspace, file_name, file_extension = file.parent, file.stem, file.suffix
-    output_path = workspace.joinpath(f"{file_name}_atempo{file_extension}")
+    return atempo_with(file, round(float(rates[1]) / float(rates[0]), 8))
 
-    conversion = round(float(rates[1]) / float(rates[0]), 8)
-    command = ["ffmpeg", "-i", str(file), "-filter:a", f"atempo={conversion}", "-vn", str(output_path)]
+
+def atempo_with(file: Path, value: float) -> Path:
+    """
+    Change the playback speed of an audio or video file using FFmpeg and save the result as a new file.
+
+    Args:
+        target (Path): The path to the audio or video file to be processed.
+        value (float): The conversion rate.
+
+    Returns: The path to the newly created file with the adjusted playback speed.
+    """
+    workspace, file_name, file_extension = file.parent, file.stem, file.suffix
+    output_path = workspace.joinpath(f"{file_name}_atempo_{value}{file_extension}")
+
+    command = ["ffmpeg", "-i", str(file), "-filter:a", f"atempo={value}", "-vn", str(output_path)]
     logging.info(command)
 
     subprocess.run(command, text=True)

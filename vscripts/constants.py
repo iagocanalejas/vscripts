@@ -3,6 +3,7 @@ PAL_RATE = 25.0
 NTSC_BROADCAST_RATE = 29.97
 
 COMMAND_ATEMPO = "atempo"
+COMMAND_ATEMPO_WITH = "atempo-with"
 COMMAND_ATEMPO_VIDEO = "atempo-video"
 COMMAND_DELAY = "delay"
 COMMAND_HASTEN = "hasten"
