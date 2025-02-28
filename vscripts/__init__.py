@@ -7,6 +7,7 @@ from .commands import (
     delay as delay,
     extract as extract,
     hasten as hasten,
+    reencode as reencode,
 )
 
 from .streams import (

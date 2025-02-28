@@ -29,12 +29,12 @@ def main(path_name: str, actions: dict[str, Any], queue: list[str]):
 
         if command == COMMAND_APPEND and arg is None:
             # condition when we append a file at the end of a command queue
-            path = fn(path, into=og_file)
+            path = fn(path, into=og_file)  # pyright: ignore
             continue
         if arg is not None:
             path = fn(path, arg)
             continue
-        path = fn(path)
+        path = fn(path)  # pyright: ignore
 
     for f in intermediate_files:
         if f != og_file:

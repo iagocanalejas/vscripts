@@ -184,3 +184,34 @@ def hasten(file: Path, hasten: float = 1.0) -> Path:
 
     subprocess.run(command, text=True)
     return output_path
+
+
+def reencode(file: Path, output: Path, quality: str) -> Path:
+    """
+    Re-encode a multimedia file using HandBrakeCLI and save the result as a new file.
+
+    Args:
+        file (Path): The path to the multimedia file to re-encode.
+        output (Path): The path to save the re-encoded multimedia file.
+        quality (str): The quality preset to use for re-encoding.
+
+    Returns: The path to the newly created re-encoded multimedia file.
+    """
+
+    command = [
+        "HandBrakeCLI",
+        f"--preset={quality}",
+        "-i",
+        str(file),
+        "-o",
+        str(output),
+        "--format=mkv",
+        "--all-audio",
+        "--audio-copy-mask=ac3,dts,dtshd,eac3,truehd",
+        "--audio-fallback=ac3",
+        "--all-subtitles",
+        "--subtitle-burn=none",
+    ]
+    logging.info(command)
+    subprocess.run(command, text=True)
+    return output

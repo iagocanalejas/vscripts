@@ -1,4 +1,4 @@
-name: rscrapping code quality
+name: vscript code quality
 on: [push]
 jobs:
     test:
