@@ -3,13 +3,11 @@
 import argparse
 import logging
 import os
-import re
 import sys
 from pathlib import Path
 
 from vscripts import reencode
-
-from pyutils.strings import remove_brackets, remove_trailing_hyphen, whitespaces_clean
+from vscripts.matcher import NameMatcher
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -22,36 +20,13 @@ PRESSETS = {
 }
 
 
-EPISODE_REGEXES = [
-    r"[ -]*(\d+)x(\d+)[ -]*",
-    r"[ -]*S(\d+)E(\d+)[ -]*",
-]
-
-
 def main(files: list[str], quality: str):
     total_files = len(files)
     for i, f in enumerate(files):
         path, file_name = os.path.dirname(f), os.path.basename(f)
-        cleaned_file_name = Path(os.path.join(path, _reencoded_file_name(file_name)))
+        cleaned_file_name = Path(os.path.join(path, NameMatcher(file_name).clean()))
         logger.info(f"{i + 1}/{total_files} reencoding {file_name} -> {cleaned_file_name}")
         reencode(Path(f).absolute(), cleaned_file_name.absolute(), quality)
-
-
-def _reencoded_file_name(file_name: str) -> str:
-    file_name = remove_brackets(file_name)
-
-    # remove everything after resolution except the extension
-    file_name = re.sub(r"_?\d+p.*\.(\w{3})", r".\1", file_name, re.IGNORECASE)
-
-    file_name = file_name.replace("_", " ")
-    file_name = file_name.replace(" (1)", "")  # remove ' (1)' for copied files
-    file_name = file_name.replace(" (TV)", "")  # remove ' (TV)' for some season names
-
-    # replace episode numbers with S01E01 format
-    file_name = re.sub("|".join(EPISODE_REGEXES), r" - S\1E\2 - ", file_name, re.IGNORECASE)
-    file_name = whitespaces_clean(remove_trailing_hyphen(file_name))
-
-    return f"{os.path.splitext(file_name)[0]}.mkv"
 
 
 def _parse_arguments():
