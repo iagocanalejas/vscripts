@@ -26,6 +26,8 @@ def main(files: list[str], quality: str):
         path, file_name = os.path.dirname(f), os.path.basename(f)
         cleaned_file_name = Path(os.path.join(path, NameMatcher(file_name).clean()))
         logger.info(f"{i + 1}/{total_files} reencoding {file_name} -> {cleaned_file_name}")
+
+        assert Path(f).absolute() != cleaned_file_name.absolute(), "invalid file name, will overwrite"
         reencode(Path(f).absolute(), cleaned_file_name.absolute(), quality)
 
 
@@ -51,5 +53,4 @@ if __name__ == "__main__":
     files = [f for f in files if f.lower().endswith((".mkv", ".mp4", ".avi"))]
 
     assert len(files) > 0, f"no valid files found in {args.folder_or_path}"
-
     main(files, PRESSETS[args.quality])
