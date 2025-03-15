@@ -6,9 +6,7 @@ import os
 import sys
 from pathlib import Path
 
-from vscripts import reencode
-from vscripts.matcher import NameMatcher
-
+sys.path[0] = os.path.join(os.path.dirname(__file__), "..")
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler(sys.stdout))
@@ -39,6 +37,9 @@ def _parse_arguments():
 
 
 if __name__ == "__main__":
+    from vscripts import reencode
+    from vscripts.matcher import NameMatcher
+
     args = _parse_arguments()
     logger.info(f"{os.path.basename(__file__)}:: args -> {args.__dict__}")
 

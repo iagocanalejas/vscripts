@@ -2,7 +2,7 @@
 
 ```sh
 # run a series of commands to a given file.
-python vscript.py PATH \
+python scripts/vscript.py PATH \
     [extract[=0]] \
     [atempo[=25.0]]] \
 	[atempo-video[=23.976]] \
@@ -12,18 +12,20 @@ python vscript.py PATH \
     [subs PATH]
 ```
 
+# Reencode
+
 ```sh
 # reencode a file using HandBrakeCLI with the given quality.
-python reencode.py FILE_OR_FOLDER ]
+python scripts/reencode.py FILE_OR_FOLDER ]
 	-q, --quality [1080p|2160p|AV1]
 ```
 
-# DownloadYT
+# DownloadFile
 
 Adds a watcher into the given file and download all the URLs found in it.
 
 ```sh
-python downloadyt.py \
+python scripts/downloafile.py \
     -f, --file PATH \
     -o, --out PATH
 ```
@@ -34,5 +36,5 @@ For each file in <path> tries to find the matching subtitle file in <path> and i
 subtitle file to the video one.
 
 ```sh
-python subtitles.py PATH
+python scripts/subtitles.py PATH
 ```

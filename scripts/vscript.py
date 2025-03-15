@@ -8,8 +8,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from vscripts import COMMAND_APPEND, COMMAND_ATEMPO, COMMANDS, NTSC_RATE
-
+sys.path[0] = os.path.join(os.path.dirname(__file__), "..")
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler(sys.stdout))
@@ -64,6 +63,8 @@ def _parse_arguments():
 
 
 if __name__ == "__main__":
+    from vscripts import COMMAND_APPEND, COMMAND_ATEMPO, COMMANDS, NTSC_RATE
+
     args, actions, queue = _parse_arguments()
     logger.info(f"{os.path.basename(__file__)}:: args -> {args.__dict__}")
     logger.info(f"{json.dumps(actions, indent=4, skipkeys=True, ensure_ascii=False)}")
