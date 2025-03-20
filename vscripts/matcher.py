@@ -11,12 +11,14 @@ class NameMatcher:
         SE_NAME = "s_season_e_episode"
         CAP_DOT_NAME = "cap_dot_season_episode"
         T_CAP_NAME = "t_cap_episode"
+        CAP = "cap"
 
     _CATEGORIES = {
         Type.X_NAME: r"[ -]*(\d+)x(\d+)[ -]*",
         Type.SE_NAME: r"[ -]*S(\d+)E(\d+)[ -]*",
         Type.T_CAP_NAME: r"t(\d{1,2}) cap (\d{2})",
         Type.CAP_DOT_NAME: r"cap (\d{3,4})",
+        Type.CAP: r"-? (\d{2}) ",
     }
 
     def __init__(self, name: str):
@@ -35,6 +37,7 @@ class NameMatcher:
             self.Type.SE_NAME: self._clean_s_season_e_episode,
             self.Type.CAP_DOT_NAME: self._clean_cap_dot_season_episode,
             self.Type.T_CAP_NAME: self._clean_t_cap_episode,
+            self.Type.CAP: self._clean_cap,
         }
         cleaning_method = cleaning_methods.get(ttype, lambda: self.name)
         return cleaning_method()
@@ -97,6 +100,15 @@ class NameMatcher:
 
         return f"{os.path.splitext(name)[0]}.mkv"
 
+    def _clean_cap(self) -> str:
+        name = self._clean_after_resolution(self.name)
+        name = self._clean_suffixes(name)
+
+        name = re.sub(r"-? -?(\d{2})-? -?", lambda m: f" - {int(m.group(1)):02d} - ", name, flags=re.IGNORECASE)
+        name = whitespaces_clean(remove_hyphens(name))
+
+        return f"{os.path.splitext(name)[0]}.mkv"
+
     #############################
     ###### CLEANING METHODS #####
     #############################
@@ -104,11 +116,15 @@ class NameMatcher:
     def _fix_spacing(self, name: str) -> str:
         name, ext = os.path.splitext(name)
         name = name.replace("_", " ").replace(".", " ").strip()
+        name = whitespaces_clean(name.replace("-", " - "))
         return f"{name}{ext}"
 
     def _clean_after_resolution(self, name: str) -> str:
         # remove everything after resolution except the extension
-        return re.sub(r" ?\d+p.*\.(\w{3})", r".\1", name, flags=re.IGNORECASE)
+        name = re.sub(r" ?\d+p.*(\.\w{3})", r"\1", name, flags=re.IGNORECASE)
+        name = re.sub(r" (?:DVDRIP|DVBRIP|BDRIP|WEBDL).*(\.\w{3})", "\1", name, flags=re.IGNORECASE)
+        name = name.replace("\x01", "")
+        return whitespaces_clean(name)
 
     def _clean_suffixes(self, name: str) -> str:
         file_name = name.replace(" (1)", "")
