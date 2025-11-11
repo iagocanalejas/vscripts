@@ -26,37 +26,48 @@ def cmd_do(input_path: Path, actions: list[str], output: Path | None, **kwargs) 
     parsed_actions = _parse_actions(actions)
     logger.info(f"Actions: {parsed_actions}")
 
-    if COMMAND_INSPECT in parsed_actions:
-        if len(parsed_actions) > 1:
-            logger.warning("The 'inspect' command should be used alone. Other commands will be ignored.")
-        COMMANDS[COMMAND_INSPECT](input_path, output=output, force_detection=kwargs.get("force_detection", False))
+    if output is not None and input_path.is_dir() and not output.is_dir():
+        raise ValueError(f"When input path is a directory, output path must also be a directory. Got {output=}")
+
+    def inner_do(path: Path, output: Path | None) -> int:
+        if COMMAND_INSPECT in parsed_actions:
+            if len(parsed_actions) > 1:
+                logger.warning("The 'inspect' command should be used alone. Other commands will be ignored.")
+            COMMANDS[COMMAND_INSPECT](path, output=output, force_detection=kwargs.get("force_detection", False))
+            return 0
+
+        track = 0
+        if COMMAND_EXTRACT in parsed_actions:
+            track_args = parsed_actions[COMMAND_EXTRACT]
+            track = track_args[0] if track_args else 0
+        data = ProcessingData.from_path(path, audio_track=track)
+
+        last_path = path
+        with create_temp_dir() as temp_dir:
+            logger.info(f"using temporary directory {temp_dir}")
+            for command, args in parsed_actions.items():
+                logger.info(f"running command '{command}' in file {last_path} with args '{args}'")
+
+                fn = COMMANDS[command]
+                if command == COMMAND_APPEND and args is None:
+                    last_path = fn(attachment=last_path, root=path, output=Path(temp_dir), extra=data)
+                elif args is not None:
+                    last_path = fn(last_path, *args, output=Path(temp_dir), extra=data)
+                else:
+                    last_path = fn(last_path, output=Path(temp_dir), extra=data)
+
+            if output is None:
+                output = path.parent / last_path.name
+            shutil.move(last_path, output)
         return 0
 
-    track = 0
-    if COMMAND_EXTRACT in parsed_actions:
-        track_args = parsed_actions[COMMAND_EXTRACT]
-        track = track_args[0] if track_args else 0
-    data = ProcessingData.from_path(input_path, audio_track=track)
-
-    last_path = input_path
-    with create_temp_dir() as temp_dir:
-        logger.info(f"using temporary directory {temp_dir}")
-        for command, args in parsed_actions.items():
-            logger.info(f"running command '{command}' in file {last_path} with args '{args}'")
-
-            fn = COMMANDS[command]
-            if command == COMMAND_APPEND and args is None:
-                last_path = fn(attachment=last_path, root=input_path, output=Path(temp_dir), extra=data)
-            elif args is not None:
-                last_path = fn(last_path, *args, output=Path(temp_dir), extra=data)
-            else:
-                last_path = fn(last_path, output=Path(temp_dir), extra=data)
-
-        if output is None:
-            output = input_path.parent / last_path.name
-        shutil.move(last_path, output)
-
-    return 0
+    if input_path.is_dir():
+        res = 0
+        for file in input_path.iterdir():
+            if file.is_file():
+                res += inner_do(file, output=output)
+        return res
+    return inner_do(input_path, output=output)
 
 
 def _parse_actions(actions: list[str]) -> OrderedDict[str, list[Any] | None]:
