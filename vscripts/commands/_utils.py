@@ -15,6 +15,20 @@ def get_output_file_path(maybe_output: Path, default_name: str) -> Path:
     return maybe_output
 
 
+def ffmpeg_copy_by_codec(codec: str | None) -> list[str]:
+    if codec and codec.lower() in ["mov_text"]:
+        return ["-c:s", "srt"]
+    return ["-c", "copy"]
+
+
+def suffix_by_codec(codec: str | None, codec_type: Literal["audio", "subtitle"]) -> str:
+    if not codec:
+        return "m4a" if codec_type == "audio" else "srt"
+    if codec_type == "subtitle" and codec.lower() == "mov_text":
+        return "srt"
+    return codec.lower()
+
+
 def run_ffmpeg_command(command: list[str]) -> None:
     quiet = os.getenv("TEST_ENV", "false").lower() == "true"
     if quiet:

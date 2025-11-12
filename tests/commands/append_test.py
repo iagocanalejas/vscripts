@@ -1,6 +1,5 @@
 import subprocess
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 from vscripts.commands._append import append, append_subs
@@ -77,35 +76,14 @@ def test_append_subs_explicit_lang(tmp_path):
 
 
 @pytest.mark.integration
-def test_append_subs_infer_lang(tmp_path):
+def test_append_subs_no_lang(tmp_path):
     video = tmp_path / "input.mp4"
     subs = tmp_path / "test.srt"
     output = tmp_path / "with_subs.mp4"
     generate_test_video(video)
     generate_test_subs(subs)
 
-    with patch(
-        "vscripts.data.streams._ffprobe_streams",
-        return_value={"streams": [{"tags": {"language": "eng"}}]},
-    ):
-        result = append_subs(subs, video, lang=None, output=output)
-
-    assert result.exists(), "Output file should exist"
-    assert result != video, "Output should be a new file"
-
-    assert has_subtitles(result), "Output file should contain subtitle streams"
-
-
-@pytest.mark.integration
-def test_append_subs_no_lang_no_infer(tmp_path):
-    video = tmp_path / "input.mp4"
-    subs = tmp_path / "test.srt"
-    output = tmp_path / "with_subs.mp4"
-    generate_test_video(video)
-    generate_test_subs(subs)
-
-    with patch("vscripts.commands._append.find_subs_language", return_value=None):
-        result = append_subs(subs, video, lang=None, output=output)
+    result = append_subs(subs, video, lang=None, output=output)
 
     assert result.exists(), "Output file should exist"
     assert result != video, "Output should be a new file"

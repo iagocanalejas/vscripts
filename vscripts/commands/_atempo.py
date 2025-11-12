@@ -76,8 +76,17 @@ def atempo_with(
         default_name=f"{input_path.stem}_atempo_{atempo_value}{suffix}",
     )
 
-    logger.info(f"adjusting audio tempo of {input_path} by atempo={atempo_value}, outputting to {output}")
-    command = ["ffmpeg", "-i", str(input_path), "-filter:a", f"atempo={atempo_value}", "-vn", str(output)]
+    logger.info(f"adjusting audio tempo of {input_path.name} by atempo={atempo_value}\n\toutputting to {output}")
+    command = [
+        "ffmpeg",
+        "-i",
+        str(input_path),
+        "-filter:a",
+        f"atempo={atempo_value}",
+        "-map_metadata",
+        "0",
+        str(output),
+    ]
     logger.info(command)
 
     run_ffmpeg_command(command)
@@ -113,9 +122,9 @@ def atempo_video(
         default_name=f"{input_path.stem}_atempo_{1 / to_rate}{suffix}",
     )
 
-    logger.info(f"adjusting video tempo of {input_path} to rate={to_rate}, outputting to {output}")
-    command = ["ffmpeg", "-i", str(input_path), "-r", f"{to_rate}", str(output)]
-    logger.info("Running command: %s", " ".join(command))
+    logger.info(f"adjusting video tempo of {input_path.name} to rate={to_rate}\n\toutputting to {output}")
+    command = ["ffmpeg", "-i", str(input_path), "-r", f"{to_rate}", "-map_metadata", "0", str(output)]
+    logger.info(command)
 
     run_ffmpeg_command(command)
     return output

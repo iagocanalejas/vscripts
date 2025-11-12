@@ -2,8 +2,6 @@ import logging
 from pathlib import Path
 
 from vscripts.commands._utils import get_output_file_path, run_ffmpeg_command
-from vscripts.constants import UNKNOWN_LANGUAGE
-from vscripts.data.language import find_subs_language
 from vscripts.data.models import ProcessingData
 from vscripts.data.streams import AudioStream, SubtitleStream
 
@@ -34,7 +32,7 @@ def append(
     if output.suffix.lower() != ".mkv":
         raise ValueError("output file must be an MKV file")
 
-    logger.info(f"appending {attachment} into {root}, outputting to {output}")
+    logger.info(f"appending {attachment.name} into {root.name}\n\toutputting to {output}")
     command = ["ffmpeg", "-i", str(root), "-i", str(attachment), "-map", "0:v?"]
 
     # map all audio tracks except the one being appended
@@ -43,7 +41,20 @@ def append(
             continue
         command += ["-map", f"0:a:{i}?"]
 
-    command += ["-map", "1:a", "-map", "0:s?", "-map_metadata", "0", "-c:v", "copy", "-c:a", "copy"]
+    command += [
+        "-map",
+        "1:a",
+        "-map",
+        "0:s?",
+        "-map_metadata",
+        "0",
+        "-map_metadata",
+        "1",
+        "-c:v",
+        "copy",
+        "-c:a",
+        "copy",
+    ]
 
     # map and set metadata for subtitle streams
     for i, subs_stream in enumerate(SubtitleStream.from_file(root)):
@@ -51,9 +62,6 @@ def append(
             command += [f"-c:s:{i}", "srt"]
         else:
             command += [f"-c:s:{i}", "copy"]
-        lang = find_subs_language(subs_stream)
-        if lang != UNKNOWN_LANGUAGE:
-            command += [f"-metadata:s:s:{i}", f"language={lang}"]
 
     command.append(str(output))
     logger.info(command)
@@ -79,11 +87,7 @@ def append_subs(attachment: Path, root: Path, lang: str | None = None, output: P
 
     output = get_output_file_path(output or root.parent, f"{root.stem}_subs{root.suffix}")
 
-    if not lang:
-        lang = find_subs_language(SubtitleStream.from_file(attachment)[0])
-
-    # TODO: extra data and multiple subtitle tracks
-    logger.info(f"appending subtitles {attachment} into {root}, outputting to {output}")
+    logger.info(f"appending subtitles {attachment.name} into {root.name}\n\toutputting to {output}")
     command = [
         "ffmpeg",
         "-i",
@@ -93,6 +97,10 @@ def append_subs(attachment: Path, root: Path, lang: str | None = None, output: P
         "-map",
         "0",
         "-map",
+        "1",
+        "-map_metadata",
+        "0",
+        "-map_metadata",
         "1",
         "-c",
         "copy",

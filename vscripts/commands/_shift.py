@@ -40,7 +40,7 @@ def delay(
         default_name=f"{input_path.stem}_delayed_{delay}{suffix}",
     )
 
-    logger.info(f"applying audio delay of {delay}ms to {input_path}, outputting to {output}")
+    logger.info(f"applying audio {delay=}ms to {input_path.name}\n\toutputting to {output}")
     command = [
         "ffmpeg",
         "-i",
@@ -82,7 +82,7 @@ def hasten(
         default_name=f"{input_path.stem}_hastened_{hasten_factor}{suffix}",
     )
 
-    logger.info(f"adjusting playback speed of {input_path} by hasten={hasten_factor}, outputting to {output}")
+    logger.info(f"adjusting playback speed of {input_path.name} by hasten={hasten_factor}\n\toutputting to {output}")
     command = [
         "ffmpeg",
         "-i",
@@ -146,7 +146,7 @@ def inspect(input_path: Path, output: Path | None = None, force_detection: bool 
         logger.info("no metadata to add, skipping processing")
         return input_path
 
-    logger.info(f"inspecting {input_path}, outputting to {output}")
+    logger.info(f"inspecting {input_path.name}\n\toutputting to {output}")
     command = [
         "ffmpeg",
         "-i",
@@ -182,7 +182,7 @@ def reencode(input_path: Path, quality: EncodingPreset, output: Path | None = No
         default_name=f"{input_path.stem}_{quality}{input_path.suffix}",
     )
 
-    logger.info(f"re-encoding {input_path} with quality={quality}, outputting to {output}")
+    logger.info(f"re-encoding {input_path.name} with {quality=}\n\toutputting to {output}")
     command = [
         "HandBrakeCLI",
         f"--preset={ENCODING_PRESETS[quality]}",
