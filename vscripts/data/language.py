@@ -51,7 +51,7 @@ def find_language(stream: AudioStream | SubtitleStream, force_detection: bool = 
 
 def find_subs_language(
     stream: SubtitleStream,
-    model_name: FastLangDetectModel = "lite",
+    model_name: FastLangDetectModel = "full",
     force_detection: bool = False,
 ) -> str:
     """

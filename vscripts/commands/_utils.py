@@ -24,8 +24,10 @@ def ffmpeg_copy_by_codec(codec: str | None) -> list[str]:
 def suffix_by_codec(codec: str | None, codec_type: Literal["audio", "subtitle"]) -> str:
     if not codec:
         return "m4a" if codec_type == "audio" else "srt"
-    if codec_type == "subtitle" and codec.lower() == "mov_text":
+    if codec.lower() == "mov_text":
         return "srt"
+    if codec.lower() == "ac3":
+        return "mka"
     return codec.lower()
 
 

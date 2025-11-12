@@ -124,7 +124,7 @@ def inspect(input_path: Path, output: Path | None = None, force_detection: bool 
     with create_temp_dir() as temp_dir:
         for i, stream in enumerate(audio_streams):
             logger.info(f"found audio stream: {stream}")
-            file = extract(input_path, "audio", track=i, output=Path(temp_dir))
+            file = extract(input_path, track=i, stream_type="audio", output=Path(temp_dir))
             lang = find_audio_language(AudioStream.from_file(file)[0], force_detection=force_detection)
             if lang != UNKNOWN_LANGUAGE:
                 logger.info(f"identified audio stream language as: {lang}")
@@ -135,7 +135,7 @@ def inspect(input_path: Path, output: Path | None = None, force_detection: bool 
     with create_temp_dir() as temp_dir:
         for i, stream in enumerate(subtitle_streams):
             logger.info(f"found subtitle stream: {stream}")
-            file = extract(input_path, "subtitle", track=i, output=Path(temp_dir))
+            file = extract(input_path, track=i, stream_type="subtitle", output=Path(temp_dir))
             lang = find_subs_language(SubtitleStream.from_file(file)[0], force_detection=force_detection)
             if lang != UNKNOWN_LANGUAGE:
                 logger.info(f"identified subtitle stream language as: {lang}")

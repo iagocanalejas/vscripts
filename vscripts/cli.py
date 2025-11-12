@@ -52,6 +52,7 @@ def cmd_do(input_path: Path, actions: list[str], output: Path | None, **kwargs) 
                 if command == COMMAND_APPEND and args is None:
                     last_path = fn(attachment=last_path, root=path, output=Path(temp_dir), extra=data)
                 elif args is not None:
+                    print(*args)
                     last_path = fn(last_path, *args, output=Path(temp_dir), extra=data)
                 else:
                     last_path = fn(last_path, output=Path(temp_dir), extra=data)

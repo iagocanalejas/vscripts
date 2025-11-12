@@ -12,8 +12,8 @@ logger = logging.getLogger("vscripts")
 
 def extract(
     input_path: Path,
-    stream_type: Literal["audio", "subtitle"] = "audio",
     track: int = 0,
+    stream_type: Literal["audio", "subtitle"] = "audio",
     output: Path | None = None,
     **_,
 ) -> Path:
