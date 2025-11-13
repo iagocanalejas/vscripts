@@ -15,6 +15,7 @@ COMMAND_ATEMPO_WITH = "atempo-with"
 COMMAND_ATEMPO_VIDEO = "atempo-video"
 COMMAND_DELAY = "delay"
 COMMAND_HASTEN = "hasten"
+COMMAND_REENCODE = "reencode"
 COMMAND_EXTRACT = "extract"
 COMMAND_INSPECT = "inspect"
 COMMAND_DISSECT = "dissect"
@@ -28,3 +29,10 @@ ENCODING_PRESETS = {
     ENCODING_1080P: "H.265 NVENC 1080p",
     ENCODING_2160P: "H.265 NVENC 2160p 4K",
 }
+
+HDR_COLOR_TRANSFERS = [
+    "smpte2084",
+    "arib-std-b67",
+    "bt2020-10",
+    "bt2020-12",
+]

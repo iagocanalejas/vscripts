@@ -56,7 +56,9 @@ branch = true
 source = ["vscripts"]
 omit = [
   "**/__init__.py",
+  "vscripts/main.py",
   "vscripts/**/_protocol.py",
+  "vscripts/reporters/*.py",
 ]
 
 [tool.coverage.report]

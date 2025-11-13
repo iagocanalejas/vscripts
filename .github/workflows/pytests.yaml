@@ -10,12 +10,17 @@ jobs:
         steps:
             - uses: actions/checkout@v5
 
-            - name: Install FFmpeg (Ubuntu)
+            - name: Install FFmpeg & HandBrakeCLI
               if: runner.os == 'Linux'
-              run: sudo apt-get update && sudo apt-get install -y ffmpeg
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y ffmpeg handbrake-cli
 
             - name: Verify FFmpeg installation
               run: ffmpeg -version
+
+            - name: Verify HandBrakeCLI installation
+              run: HandBrakeCLI --version
 
             - name: Set up Python ${{ matrix.python-version }}
               uses: actions/setup-python@v6

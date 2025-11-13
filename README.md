@@ -12,6 +12,7 @@ vscripts do PATH \
 	[atempo-video[=23.976]] \
     [delay[=1.0]] \
     [hasten[=1.0]] \
+    [reencode[=PRESET]] \
     [append[=LAST_OUTPUT]] \
     [subs PATH]
 ```

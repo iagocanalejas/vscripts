@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 from vscripts.commands._extract import dissect, extract
-from vscripts.commands._utils import has_audio, has_subtitles
+from vscripts.utils import has_audio, has_subtitles
 
 from tests._utils import generate_test_full
 

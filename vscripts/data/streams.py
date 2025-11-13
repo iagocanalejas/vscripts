@@ -1,10 +1,12 @@
 import json
 import logging
-import subprocess
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Literal
+
+from vscripts.constants import HDR_COLOR_TRANSFERS
+from vscripts.utils import run_ffprobe_command
 
 logger = logging.getLogger("vscripts")
 
@@ -14,11 +16,18 @@ class VideoStream:
     index: int
     file_path: Path = field(init=False)
     duration: str | None = None
+    r_frame_rate: float | None = None
     codec_name: str | None = None
     codec_type: str | None = None
-    r_frame_rate: float | None = None
     format_names: list[str] | None = None
+    color_space: str = "bt709"
+    color_transfer: str = "bt709"
+    color_primaries: str = "bt709"
     tags: dict[str, str] = field(default_factory=dict)
+
+    @property
+    def is_hdr(self) -> bool:
+        return self.color_transfer.lower() in HDR_COLOR_TRANSFERS
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "VideoStream":
@@ -37,10 +46,13 @@ class VideoStream:
 
         return VideoStream(
             index=data.get("index", -1),
+            duration=duration,
+            r_frame_rate=_parse_frame_rate(data.get("r_frame_rate")),
             codec_name=data.get("codec_name"),
             codec_type=data.get("codec_type"),
-            r_frame_rate=_parse_frame_rate(data.get("r_frame_rate")),
-            duration=duration,
+            color_space=data.get("color_space", "bt709"),
+            color_transfer=data.get("color_transfer", "bt709"),
+            color_primaries=data.get("color_primaries", "bt709"),
             tags=data.get("tags", {}),
         )
 
@@ -153,26 +165,19 @@ def _parse_frame_rate(frame_rate: str | None) -> float | None:
 
 
 def _ffprobe_streams(file_path: Path, stream_type: Literal["v", "a", "s"]) -> dict[str, Any]:
-    result = subprocess.run(
-        [
-            "ffprobe",
-            "-v",
-            "error",
-            "-select_streams",
-            stream_type,
-            "-of",
-            "json",
-            "-show_entries",
-            "stream=index,duration,r_frame_rate,codec_name,codec_type",
-            "-show_entries",
-            "format=format_name",
-            "-show_entries",
-            "stream_tags",
-            str(file_path),
-        ],
-        capture_output=True,
-        text=True,
-    )
-    result = json.loads(result.stdout)
+    command = [
+        "-select_streams",
+        stream_type,
+        "-show_entries",
+        "stream=index,duration,r_frame_rate,codec_name,codec_type,color_space,color_transfer,color_primaries",
+        "-show_entries",
+        "format=format_name",
+        "-show_entries",
+        "stream_tags",
+        "-of",
+        "json",
+    ]
+    result = run_ffprobe_command(file_path, command)
+    result = json.loads(result)
     logger.info(f"found '{stream_type}' stream =\n{json.dumps(result, indent=2)}")
     return result

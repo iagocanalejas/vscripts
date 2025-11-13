@@ -1,9 +1,9 @@
 import logging
 from pathlib import Path
 
-from vscripts.commands._utils import get_output_file_path, run_ffmpeg_command
 from vscripts.data.models import ProcessingData
 from vscripts.data.streams import AudioStream, SubtitleStream
+from vscripts.utils import get_output_file_path, run_ffmpeg_command
 
 logger = logging.getLogger("vscripts")
 
@@ -33,7 +33,7 @@ def append(
         raise ValueError("output file must be an MKV file")
 
     logger.info(f"appending {attachment.name} into {root.name}\n\toutputting to {output}")
-    command = ["ffmpeg", "-i", str(root), "-i", str(attachment), "-map", "0:v?"]
+    command = ["-i", str(root), "-i", str(attachment), "-map", "0:v?"]
 
     # map all audio tracks except the one being appended
     for i in range(len(AudioStream.from_file(root))):
@@ -64,8 +64,6 @@ def append(
             command += [f"-c:s:{i}", "copy"]
 
     command.append(str(output))
-    logger.info(command)
-
     run_ffmpeg_command(command)
     return output
 
@@ -89,7 +87,6 @@ def append_subs(attachment: Path, root: Path, lang: str | None = None, output: P
 
     logger.info(f"appending subtitles {attachment.name} into {root.name}\n\toutputting to {output}")
     command = [
-        "ffmpeg",
         "-i",
         str(root),
         "-i",
@@ -112,8 +109,7 @@ def append_subs(attachment: Path, root: Path, lang: str | None = None, output: P
         ]
     if "mp4" in root.suffix:
         command += ["-scodec", "mov_text"]
-    command.append(str(output))
-    logger.info(command)
 
+    command.append(str(output))
     run_ffmpeg_command(command)
     return output

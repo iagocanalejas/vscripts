@@ -1,5 +1,6 @@
-import subprocess
 from pathlib import Path
+
+from vscripts.utils import run_ffmpeg_command
 
 
 def generate_test_subs(path: Path) -> Path:
@@ -16,43 +17,32 @@ This is a test.
 
 
 def generate_test_audio(path: Path, freq: int = 1000, duration: float = 0.5) -> Path:
-    subprocess.run(
-        [
-            "ffmpeg",
-            "-f",
-            "lavfi",
-            "-i",
-            f"sine=frequency={freq}:duration={duration}",
-            str(path),
-            "-y",
-        ],
-        check=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
+    command = [
+        "-f",
+        "lavfi",
+        "-i",
+        f"sine=frequency={freq}:duration={duration}",
+        str(path),
+        "-y",
+    ]
+    run_ffmpeg_command(command)
     return path
 
 
 def generate_test_video(path: Path, duration: float = 1.0, rate: float = 30.0) -> Path:
-    """Generate a short test video with FFmpeg (color + silent audio)."""
-    subprocess.run(
-        [
-            "ffmpeg",
-            "-f",
-            "lavfi",
-            "-i",
-            f"color=c=blue:s=64x64:d={duration}",
-            "-c:v",
-            "libx264",
-            "-r",
-            str(rate),
-            str(path),
-            "-y",
-        ],
-        check=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
+    command = [
+        "-f",
+        "lavfi",
+        "-i",
+        f"color=c=blue:s=64x64:d={duration}",
+        "-c:v",
+        "libx264",
+        "-r",
+        str(rate),
+        str(path),
+        "-y",
+    ]
+    run_ffmpeg_command(command)
     return path
 
 
@@ -66,33 +56,27 @@ def generate_test_full(tmp_path: Path, duration: float = 1.0, rate: float = 30.0
 
     output = tmp_path / "full_video.mp4"
 
-    subprocess.run(
-        [
-            "ffmpeg",
-            "-i",
-            str(video_path),
-            "-i",
-            str(audio_path),
-            "-i",
-            str(subs_path),
-            "-c",
-            "copy",
-            "-map",
-            "0",
-            "-map",
-            "1",
-            "-acodec",
-            "aac",
-            "-map",
-            "2",
-            "-scodec",
-            "mov_text",
-            str(output),
-            "-y",
-        ],
-        check=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-
+    command = [
+        "-i",
+        str(video_path),
+        "-i",
+        str(audio_path),
+        "-i",
+        str(subs_path),
+        "-c",
+        "copy",
+        "-map",
+        "0",
+        "-map",
+        "1",
+        "-acodec",
+        "aac",
+        "-map",
+        "2",
+        "-scodec",
+        "mov_text",
+        str(output),
+        "-y",
+    ]
+    run_ffmpeg_command(command)
     return output

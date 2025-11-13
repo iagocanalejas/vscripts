@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import pytest
 from vscripts.commands._atempo import atempo, atempo_video, atempo_with
-from vscripts.commands._utils import get_file_duration
+from vscripts.utils import get_file_duration
 
 from tests._utils import generate_test_audio, generate_test_video
 
@@ -40,11 +40,29 @@ def test_atempo_infering_from_rate(tmp_path):
     output = tmp_path / "atempoed.mkv"
     generate_test_audio(input_file)
 
-    with patch(
-        "vscripts.data.streams._ffprobe_streams",
-        return_value={"streams": [{"r_frame_rate": "25/1", "codec_type": "video", "tags": {"language": "eng"}}]},
+    with (
+        patch("vscripts.commands._atempo.has_video", return_value=True),
+        patch(
+            "vscripts.data.streams._ffprobe_streams",
+            return_value={"streams": [{"r_frame_rate": "25/1", "codec_type": "video", "tags": {"language": "eng"}}]},
+        ),
     ):
         output_file = atempo(input_file, from_rate=None, to_rate=30.0, output=output)
+
+    assert output_file.exists(), "Output file should exist"
+    assert output_file != input_file, "Output file should be different from input"
+
+    duration = get_file_duration(output)
+    assert 0 < duration < 0.5, f"Expected shorter duration, got {duration}s"
+
+
+@pytest.mark.integration
+def test_simple_atempo_default_value(tmp_path):
+    input_file = tmp_path / "input.wav"
+    output = tmp_path / "atempoed.mkv"
+    generate_test_audio(input_file)
+
+    output_file = atempo(input_file, to_rate=30.0, output=output)
 
     assert output_file.exists(), "Output file should exist"
     assert output_file != input_file, "Output file should be different from input"

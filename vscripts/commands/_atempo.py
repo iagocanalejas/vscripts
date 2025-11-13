@@ -1,10 +1,10 @@
 import logging
 from pathlib import Path
 
-from vscripts.commands._utils import get_output_file_path, has_audio, has_video, run_ffmpeg_command
 from vscripts.constants import NTSC_RATE, PAL_RATE
 from vscripts.data.models import ProcessingData
 from vscripts.data.streams import AudioStream, VideoStream
+from vscripts.utils import get_output_file_path, has_audio, has_video, run_ffmpeg_command
 
 logger = logging.getLogger("vscripts")
 
@@ -77,18 +77,7 @@ def atempo_with(
     )
 
     logger.info(f"adjusting audio tempo of {input_path.name} by atempo={atempo_value}\n\toutputting to {output}")
-    command = [
-        "ffmpeg",
-        "-i",
-        str(input_path),
-        "-filter:a",
-        f"atempo={atempo_value}",
-        "-map_metadata",
-        "0",
-        str(output),
-    ]
-    logger.info(command)
-
+    command = ["-i", str(input_path), "-filter:a", f"atempo={atempo_value}", "-map_metadata", "0", str(output)]
     run_ffmpeg_command(command)
     return output
 
@@ -123,8 +112,6 @@ def atempo_video(
     )
 
     logger.info(f"adjusting video tempo of {input_path.name} to rate={to_rate}\n\toutputting to {output}")
-    command = ["ffmpeg", "-i", str(input_path), "-r", f"{to_rate}", "-map_metadata", "0", str(output)]
-    logger.info(command)
-
+    command = ["-i", str(input_path), "-r", f"{to_rate}", "-map_metadata", "0", str(output)]
     run_ffmpeg_command(command)
     return output

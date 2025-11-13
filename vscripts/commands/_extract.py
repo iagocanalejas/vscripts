@@ -3,9 +3,9 @@ from pathlib import Path
 from typing import Literal
 
 from pyutils.paths import create_temp_dir
-from vscripts.commands._utils import ffmpeg_copy_by_codec, get_output_file_path, run_ffmpeg_command, suffix_by_codec
 from vscripts.data.language import find_language
 from vscripts.data.streams import AudioStream, SubtitleStream, VideoStream
+from vscripts.utils import ffmpeg_copy_by_codec, get_output_file_path, run_ffmpeg_command, suffix_by_codec
 
 logger = logging.getLogger("vscripts")
 
@@ -39,11 +39,10 @@ def extract(
     with create_temp_dir() as temp_dir:
         temp_output = Path(temp_dir) / f"temp_extracted.{suffix}"
         logger.info(f"extracting {stream_type} {track=} from {input_path.name}\n\toutputting to {temp_output}")
-        command = ["ffmpeg", "-i", str(input_path), "-map", f"0:{ffmpeg_type}:{track}", "-map_metadata", "0"]
+        command = ["-i", str(input_path), "-map", f"0:{ffmpeg_type}:{track}", "-map_metadata", "0"]
         command += ffmpeg_copy_by_codec(stream.codec_name)
         command.append(str(temp_output))
 
-        logger.info(command)
         run_ffmpeg_command(command)
 
         stream = StreamClass.from_file(temp_output)[0]
@@ -56,7 +55,6 @@ def extract(
 
         logger.info(f"moving extracted file to {output} with {lang=}")
         command = [
-            "ffmpeg",
             "-i",
             str(temp_output),
             "-map",
@@ -69,7 +67,6 @@ def extract(
             f"language={lang}",
             str(output),
         ]
-        logger.info(command)
         run_ffmpeg_command(command)
 
     return output
@@ -97,7 +94,6 @@ def dissect(input_path: Path, output: Path | None = None, **_) -> Path:
     if video_stream is not None:
         logger.info(f"excracting video stream ({video_stream.codec_name})")
         command = [
-            "ffmpeg",
             "-i",
             str(input_path),
             "-map",
@@ -108,14 +104,12 @@ def dissect(input_path: Path, output: Path | None = None, **_) -> Path:
             "copy",
             str(output / f"stream_{video_stream.index:03d}.{video_stream.codec_name}"),
         ]
-        logging.info(command)
         run_ffmpeg_command(command)
 
     logger.info(f"excracting {len(audio_streams)} audio streams")
     for stream in audio_streams:
         logger.info(f"\t- audio stream {stream.index} ({stream.codec_name})")
         command = [
-            "ffmpeg",
             "-i",
             str(input_path),
             "-map",
@@ -126,14 +120,12 @@ def dissect(input_path: Path, output: Path | None = None, **_) -> Path:
             "copy",
             str(output / f"stream_{stream.index:03d}.{suffix_by_codec(stream.codec_name, 'audio')}"),
         ]
-        logging.info(command)
         run_ffmpeg_command(command)
 
     logger.info(f"excracting {len(subtitle_streams)} subtitle streams")
     for stream in subtitle_streams:
         logger.info(f"\t- subtitle stream {stream.index} ({stream.codec_name})")
         command = [
-            "ffmpeg",
             "-i",
             str(input_path),
             "-map",
@@ -143,7 +135,6 @@ def dissect(input_path: Path, output: Path | None = None, **_) -> Path:
         ]
         command += ffmpeg_copy_by_codec(stream.codec_name)
         command.append(str(output / f"stream_{stream.index:03d}.{suffix_by_codec(stream.codec_name, 'subtitle')}"))
-        logging.info(command)
         run_ffmpeg_command(command)
 
     return output

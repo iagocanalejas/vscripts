@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 from vscripts.commands._append import append, append_subs
-from vscripts.commands._utils import has_subtitles
+from vscripts.utils import FFPROBE_BASE_COMMAND, has_subtitles
 
 from tests._utils import generate_test_audio, generate_test_subs, generate_test_video
 
@@ -42,10 +42,8 @@ def test_simple_append(tmp_path):
     assert output.exists()
 
     out = subprocess.check_output(
-        [
-            "ffprobe",
-            "-v",
-            "error",
+        FFPROBE_BASE_COMMAND
+        + [
             "-select_streams",
             "a",
             "-show_entries",

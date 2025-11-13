@@ -1,14 +1,13 @@
 import json
 import logging
-import subprocess
 from pathlib import Path
 
 from pyutils.paths import create_temp_dir
-from vscripts.commands._utils import get_output_file_path, run_ffmpeg_command
-from vscripts.constants import ENCODING_PRESETS, UNKNOWN_LANGUAGE, EncodingPreset
+from vscripts.constants import ENCODING_1080P, ENCODING_PRESETS, UNKNOWN_LANGUAGE, EncodingPreset
 from vscripts.data.language import find_audio_language, find_subs_language
 from vscripts.data.models import ProcessingData
 from vscripts.data.streams import AudioStream, SubtitleStream
+from vscripts.utils import get_output_file_path, is_hdr, run_ffmpeg_command, run_handbrake_command
 
 from ._extract import extract
 
@@ -42,7 +41,6 @@ def delay(
 
     logger.info(f"applying audio {delay=}ms to {input_path.name}\n\toutputting to {output}")
     command = [
-        "ffmpeg",
         "-i",
         str(input_path),
         "-af",
@@ -51,7 +49,6 @@ def delay(
         "experimental",
         str(output),
     ]
-    logger.info(command)
 
     run_ffmpeg_command(command)
     return output
@@ -84,7 +81,6 @@ def hasten(
 
     logger.info(f"adjusting playback speed of {input_path.name} by hasten={hasten_factor}\n\toutputting to {output}")
     command = [
-        "ffmpeg",
         "-i",
         str(input_path),
         "-ss",
@@ -95,7 +91,6 @@ def hasten(
         "experimental",
         str(output),
     ]
-    logger.info(command)
 
     run_ffmpeg_command(command)
     return output
@@ -148,7 +143,6 @@ def inspect(input_path: Path, output: Path | None = None, force_detection: bool 
 
     logger.info(f"inspecting {input_path.name}\n\toutputting to {output}")
     command = [
-        "ffmpeg",
         "-i",
         str(input_path),
         "-map",
@@ -158,14 +152,13 @@ def inspect(input_path: Path, output: Path | None = None, force_detection: bool 
         *metadata,
         str(output),
     ]
-    logger.info(command)
 
     run_ffmpeg_command(command)
     logger.info(f"updated metadata: {json.dumps(found_metadata, indent=2)}")
     return output
 
 
-def reencode(input_path: Path, quality: EncodingPreset, output: Path | None = None) -> Path:
+def reencode(input_path: Path, quality: EncodingPreset = ENCODING_1080P, output: Path | None = None) -> Path:
     """
     Re-encode a multimedia file using HandBrakeCLI with a specified quality preset and save it as a new file.
     Args:
@@ -179,26 +172,12 @@ def reencode(input_path: Path, quality: EncodingPreset, output: Path | None = No
 
     output = get_output_file_path(
         output or input_path.parent,
-        default_name=f"{input_path.stem}_{quality}{input_path.suffix}",
+        default_name=f"{input_path.stem}_{quality}.mkv",
     )
 
     logger.info(f"re-encoding {input_path.name} with {quality=}\n\toutputting to {output}")
-    command = [
-        "HandBrakeCLI",
-        f"--preset={ENCODING_PRESETS[quality]}",
-        "-i",
-        str(input_path),
-        "-o",
-        str(output),
-        "--format=mkv",
-        "--all-audio",
-        "--audio-copy-mask=ac3,dts,dtshd,eac3,truehd",
-        "--audio-fallback=ac3",
-        "--all-subtitles",
-        "--subtitle-burn=none",
-    ]
-    logger.info(command)
-
-    # TODO: create something like run_handbrake_command(command)
-    subprocess.run(command, text=True)
+    command = [f"--preset={ENCODING_PRESETS[quality]}"]
+    if is_hdr(input_path):
+        command += ["--colorspace=bt709"]
+    run_handbrake_command(input_path, output, command)
     return output
