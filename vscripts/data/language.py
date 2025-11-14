@@ -11,11 +11,11 @@ from lhotse import MonoCut, Recording
 from pyutils.paths import create_temp_dir
 from vscripts.constants import UNKNOWN_LANGUAGE
 from vscripts.data.streams import AudioStream, SubtitleStream
+from vscripts.utils import WhisperModel, load_whisper
 
 logger = logging.getLogger("vscripts")
 
 
-SCORE_THRESHOLD = 0.8
 NUM_SAMPLES = 10
 SAMPLE_DURATION = 30.0
 
@@ -29,9 +29,7 @@ ISO639_1_TO_3 = {
     "zh": "zho",
     "ja": "jpn",
 }
-
-FastLangDetectModel = Literal["lite", "full", "auto"]
-WhisperModel = Literal["small", "medium", "large", "turbo"]
+ISO639_3_TO_1 = {v: k for k, v in ISO639_1_TO_3.items()}
 
 
 def find_language(stream: AudioStream | SubtitleStream, force_detection: bool = False) -> str:
@@ -49,9 +47,17 @@ def find_language(stream: AudioStream | SubtitleStream, force_detection: bool = 
         return find_subs_language(stream, force_detection=force_detection)
 
 
+_MODEL_MAP: dict[WhisperModel, Literal["lite", "full", "auto"]] = {
+    "small": "lite",
+    "medium": "auto",
+    "large": "full",
+    "turbo": "auto",
+}
+
+
 def find_subs_language(
     stream: SubtitleStream,
-    model_name: FastLangDetectModel = "full",
+    model_name: WhisperModel = "turbo",
     force_detection: bool = False,
 ) -> str:
     """
@@ -76,9 +82,9 @@ def find_subs_language(
     with stream.file_path.open("r", encoding="utf-8", errors="ignore") as f:
         content = f.read()
 
-    t = detect(content, model=model_name, k=3)
+    t = detect(content, model=_MODEL_MAP[model_name], k=3)
     if len(t) > 0:
-        if float(t[0]["score"]) < SCORE_THRESHOLD:
+        if float(t[0]["score"]) < 0.8:
             logger.warning(f"low confidence for detected language: {t[0]['score']:.2f}")
         lang = str(t[0]["lang"])
     return _convert_lang_code(lang) if lang else UNKNOWN_LANGUAGE
@@ -86,7 +92,7 @@ def find_subs_language(
 
 def find_audio_language(
     stream: AudioStream,
-    model_name: WhisperModel = "small",
+    model_name: WhisperModel = "turbo",
     num_samples: int = NUM_SAMPLES,
     force_detection: bool = False,
 ) -> str:
@@ -108,25 +114,28 @@ def find_audio_language(
 
     rec = Recording.from_file(str(stream.file_path))
     samples = [(stream.file_path, 0.0, rec.duration)]
-    model = whisper.load_model(model_name)
+    model = load_whisper(model_name)
+
+    if rec.duration < 2 * SAMPLE_DURATION:
+        logger.info(f"audio duration {rec.duration:.2f}s is too short for sampling, analyzing full audio")
+        return _convert_lang_code(_analyze_language(samples[0], model)["language"])
 
     with create_temp_dir() as temp_dir:
         logger.info(f"sampling audio in {num_samples} parts for language detection")
-        if rec.duration > 2 * SAMPLE_DURATION:
-            samples = []
-            for i in range(num_samples):
-                out_path = Path(temp_dir) / f"sample_{i}.wav"
-                start = random.uniform(0, max(0, rec.duration - SAMPLE_DURATION))
+        samples = []
+        for i in range(num_samples):
+            out_path = Path(temp_dir) / f"sample_{i}.wav"
+            start = random.uniform(0, max(0, rec.duration - SAMPLE_DURATION))
 
-                MonoCut(
-                    id=f"sample_{i}",
-                    start=start,
-                    duration=SAMPLE_DURATION,
-                    channel=rec.channel_ids[0] if rec.channel_ids is not None else 0,
-                    recording=rec,
-                ).save_audio(str(out_path))
-                logger.debug(f"sampled audio: {out_path} [{start:.2f}s - {start + SAMPLE_DURATION:.2f}s]")
-                samples.append((out_path, start, start + SAMPLE_DURATION))
+            MonoCut(
+                id=f"sample_{i}",
+                start=start,
+                duration=SAMPLE_DURATION,
+                channel=rec.channel_ids[0] if rec.channel_ids is not None else 0,
+                recording=rec,
+            ).save_audio(str(out_path))
+            logger.debug(f"sampled audio: {out_path} [{start:.2f}s - {start + SAMPLE_DURATION:.2f}s]")
+            samples.append((out_path, start, start + SAMPLE_DURATION))
         results = [_analyze_language(s, model) for s in samples]
 
     lang_counts = Counter[str](res["language"] for res in results)

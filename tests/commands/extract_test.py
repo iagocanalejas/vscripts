@@ -1,6 +1,8 @@
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
+import whisper
 from vscripts.commands._extract import dissect, extract
 from vscripts.utils import has_audio, has_subtitles
 
@@ -21,12 +23,14 @@ def test_extract_audio_and_subs(tmp_path):
     assert has_audio(video_path)
     assert has_subtitles(video_path)
 
-    audio_out = extract(video_path, track=0, stream_type="audio")
+    with patch("vscripts.data.language.load_whisper", return_value=whisper.load_model("small")):
+        audio_out = extract(video_path, track=0, stream_type="audio")
+        subs_out = extract(video_path, track=0, stream_type="subtitle")
+
     assert audio_out.exists(), "Audio output file should exist"
     assert audio_out.suffix in {".mp3", ".aac", ".wav", ".m4a"}, f"Unexpected audio extension {audio_out.suffix}"
     assert has_audio(audio_out), "Extracted file should contain an audio stream"
 
-    subs_out = extract(video_path, track=0, stream_type="subtitle")
     assert subs_out.exists(), "Subtitle output file should exist"
     assert subs_out.suffix in {".srt", ".ass", ".vtt"}, f"Unexpected subtitle extension {subs_out.suffix}"
     content = subs_out.read_text(errors="ignore")

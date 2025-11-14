@@ -1,7 +1,9 @@
 import subprocess
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
+import whisper
 from vscripts.commands._shift import delay, hasten, inspect, reencode
 from vscripts.constants import ENCODING_1080P
 from vscripts.data.streams import _ffprobe_streams
@@ -61,7 +63,8 @@ def test_inspect_adds_language_metadata(tmp_path):
     assert has_audio(video_path)
     assert has_subtitles(video_path)
 
-    inspected_path = inspect(video_path, force_detection=True)
+    with patch("vscripts.data.language.load_whisper", return_value=whisper.load_model("small")):
+        inspected_path = inspect(video_path, force_detection=True)
 
     assert inspected_path.exists(), "Output file should exist"
     assert inspected_path != video_path, "Output file should be a new file"

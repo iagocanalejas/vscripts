@@ -126,3 +126,11 @@ def is_hdr(path: Path) -> bool:
     ]
     result = run_ffprobe_command(path, command)
     return any(h in result.lower() for h in HDR_COLOR_TRANSFERS)
+
+
+def to_srt_timestamp(seconds: float) -> str:
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    secs = int(seconds % 60)
+    millis = int((seconds - int(seconds)) * 1000)
+    return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"

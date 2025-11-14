@@ -13,6 +13,7 @@ from vscripts.constants import (
     COMMAND_HASTEN,
     COMMAND_DISSECT,
     COMMAND_INSPECT,
+    COMMAND_GENERATE_SUBS,
 )
 
 from ._append import (
@@ -38,6 +39,10 @@ from ._shift import (
     reencode as reencode,
 )
 
+from ._generate import (
+    generate_subtitles as generate_subtitles,
+)
+
 COMMANDS: dict[str, Callable[..., Path]] = {
     COMMAND_ATEMPO: atempo,
     COMMAND_ATEMPO_WITH: atempo_with,
@@ -50,4 +55,5 @@ COMMANDS: dict[str, Callable[..., Path]] = {
     COMMAND_DISSECT: dissect,
     COMMAND_APPEND: append,
     COMMAND_APPEND_SUBS: append_subs,
+    COMMAND_GENERATE_SUBS: generate_subtitles,
 }

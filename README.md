@@ -3,23 +3,50 @@
 ```sh
 # install VScripts
 pip install .
+```
 
-# run a series of commands to a given file.
-vscripts do PATH \
-    [extract[=0]] \
-    [atempo[=25.0,23.976]]] \
-    [atempo-with] \
-	[atempo-video[=23.976]] \
-    [delay[=1.0]] \
-    [hasten[=1.0]] \
-    [reencode[=PRESET]] \
-    [append[=LAST_OUTPUT]] \
-    [subs PATH]
+### Basic Usage
+
+```sh
+vscripts do PATH extract generate-subs append
+# this command will:
+# 1. extract audio from PATH video file
+# 2. generate subtitles for the extracted audio
+# 3. append the generated subtitles to the original video file
 ```
 
 ```sh
-# inspect a file and adds metadata to it.
+vscripts do PATH extract atempo delay=2 append
+# this command will:
+# 1. extract audio from PATH video file
+# 2. change the audio tempo
+# 3. delay the audio by 2 seconds
+# 4. append the modified audio back to the original video file
+```
+
+```sh
 vscripts do PATH inspect [--force-detection]
+# this command will:
+# 1. inspect the video file at PATH
+# 2. if --force-detection is provided, it will force re-detection ignoring metadata
+# 3. add all the found metadata to the video file
+```
+
+### Available Commands
+
+```sh
+append=PATH
+append-subs=PATH
+atempo=OG_RATE,NEW_RATE
+atempo-with=FACTOR
+atempo-video=FACTOR
+extract=TRACK_INDEX
+dissect
+delay=SECONDS
+hasten=SECONDS
+inspect
+reencode=PRESET
+generate-subs
 ```
 
 # Subtitles
@@ -34,7 +61,11 @@ python scripts/subtitles.py PATH
 # Utilities
 
 ```sh
-TEST_ENV=true python -m pytest -n auto
-TEST_ENV=true coverage run -m pytest
+python -m pytest -n auto
+coverage run -m pytest
 coverage report -m
+```
+
+```
+
 ```

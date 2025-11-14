@@ -4,6 +4,7 @@ from pathlib import Path
 from vscripts.data.models import ProcessingData
 from vscripts.data.streams import AudioStream, SubtitleStream
 from vscripts.utils import get_output_file_path, run_ffmpeg_command
+from vscripts.utils._utils import has_audio
 
 logger = logging.getLogger("vscripts")
 
@@ -35,15 +36,17 @@ def append(
     logger.info(f"appending {attachment.name} into {root.name}\n\toutputting to {output}")
     command = ["-i", str(root), "-i", str(attachment), "-map", "0:v?"]
 
-    # map all audio tracks except the one being appended
-    for i in range(len(AudioStream.from_file(root))):
-        if extra is not None and i == extra.audio_track:
-            continue
-        command += ["-map", f"0:a:{i}?"]
+    if has_audio(attachment):
+        # map all audio tracks except the one being appended
+        for i in range(len(AudioStream.from_file(root))):
+            if extra is not None and i == extra.audio_track:
+                continue
+            command += ["-map", f"0:a:{i}?"]
+        command += ["-map", "1:a"]
+    else:
+        command += ["-map", "0:a", "-map", "1:s", "-disposition:s:0", "default"]
 
     command += [
-        "-map",
-        "1:a",
         "-map",
         "0:s?",
         "-map_metadata",
@@ -68,13 +71,13 @@ def append(
     return output
 
 
-def append_subs(attachment: Path, root: Path, lang: str | None = None, output: Path | None = None) -> Path:
+def append_subs(attachment: Path, root: Path, language: str | None = None, output: Path | None = None) -> Path:
     """
     Append subtitles to a video file using FFmpeg and save it as a new file.
     Args:
         attachment (Path): The path to the subtitle file to append.
         root (Path): The path to the input video file.
-        lang (str | None): The language code for the subtitles.
+        language (str | None): The language code for the subtitles.
         output (Path | None): The path to save the output file.
     Returns: The path to the newly created video file with subtitles.
     """
@@ -102,10 +105,10 @@ def append_subs(attachment: Path, root: Path, lang: str | None = None, output: P
         "-c",
         "copy",
     ]
-    if lang:
+    if language:
         command += [
             f"-metadata:s:s:{len(SubtitleStream.from_file(root))}",
-            f"language={lang}",
+            f"language={language}",
         ]
     if "mp4" in root.suffix:
         command += ["-scodec", "mov_text"]

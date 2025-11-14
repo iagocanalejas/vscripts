@@ -65,7 +65,7 @@ def test_append_subs_explicit_lang(tmp_path):
     generate_test_video(video)
     generate_test_subs(subs)
 
-    result = append_subs(subs, video, lang="eng", output=output)
+    result = append_subs(subs, video, language="eng", output=output)
 
     assert result.exists(), "Output file should exist"
     assert result != video, "Output should be a new file"
@@ -81,7 +81,7 @@ def test_append_subs_no_lang(tmp_path):
     generate_test_video(video)
     generate_test_subs(subs)
 
-    result = append_subs(subs, video, lang=None, output=output)
+    result = append_subs(subs, video, language=None, output=output)
 
     assert result.exists(), "Output file should exist"
     assert result != video, "Output should be a new file"
@@ -97,7 +97,7 @@ def test_append_subs_no_mp4(tmp_path):
     generate_test_video(video)
     generate_test_subs(subs)
 
-    result = append_subs(subs, video, lang="eng", output=output)
+    result = append_subs(subs, video, language="eng", output=output)
 
     assert result.exists(), "Output file should exist"
     assert result != video, "Output should be a new file"

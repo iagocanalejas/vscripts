@@ -14,4 +14,10 @@ from ._utils import (
     has_subtitles as has_subtitles,
     has_stream as has_stream,
     is_hdr as is_hdr,
+    to_srt_timestamp as to_srt_timestamp,
+)
+
+from ._whisper import (
+    WhisperModel as WhisperModel,
+    load_whisper as load_whisper,
 )

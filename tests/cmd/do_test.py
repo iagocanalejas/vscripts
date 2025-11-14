@@ -1,4 +1,7 @@
+from unittest.mock import patch
+
 import pytest
+import whisper
 from vscripts.cli import cmd_do
 from vscripts.utils import get_file_duration
 
@@ -10,8 +13,7 @@ def test_do_audio(tmp_path):
     audio_path = generate_test_audio(tmp_path / "audio.mp3", duration=2)
     output_path = tmp_path / "output.mp3"
 
-    actions = ["atempo", "hasten=1"]
-    cmd_do(audio_path, actions, output=output_path)
+    cmd_do(audio_path, ["atempo", "hasten=1"], output=output_path)
 
     assert output_path.exists(), "Output file should exist"
     assert output_path != audio_path, "Output file should be different from input"
@@ -24,8 +26,8 @@ def test_do_full_pipe(tmp_path):
     video_path = generate_test_full(tmp_path, duration=1)
     output_path = tmp_path / "output.mp4"
 
-    actions = ["extract", "atempo", "delay=2", "append"]
-    cmd_do(video_path, actions, output=output_path)
+    with patch("vscripts.data.language.load_whisper", return_value=whisper.load_model("small")):
+        cmd_do(video_path, ["extract", "atempo", "delay=2", "append"], output=output_path)
 
     assert output_path.exists(), "Output file should exist"
     assert output_path != video_path, "Output file should be different from input"
@@ -38,8 +40,8 @@ def test_do_inspect(tmp_path):
     video_path = generate_test_full(tmp_path, duration=1)
     output_path = tmp_path / "output.mp4"
 
-    actions = ["inspect"]
-    cmd_do(video_path, actions, output=output_path)
+    with patch("vscripts.data.language.load_whisper", return_value=whisper.load_model("small")):
+        cmd_do(video_path, ["inspect"], output=output_path)
 
     assert output_path.exists(), "Output file should exist"
     assert output_path != video_path, "Output file should be a new file"

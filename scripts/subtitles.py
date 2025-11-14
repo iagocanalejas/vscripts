@@ -28,7 +28,7 @@ def main(directory_path: str, lang: str):
             continue
 
         logger.info(f"appending {sub_file=} to {file=}")
-        append_subs(Path(sub_file), root=Path(file), lang=lang)
+        append_subs(Path(sub_file), root=Path(file), language=lang)
 
 
 def _match_subs(directory: str, file_name: str, is_subs=False) -> str | None:
