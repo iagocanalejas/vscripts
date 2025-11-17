@@ -26,7 +26,7 @@ def atempo(
         extra (ProcessingData | None): Additional processing data that may contain video stream information.
     Returns: The path to the newly created file with adjusted audio tempo.
     """
-    if not input_path.is_file() or not input_path.exists():
+    if not input_path.is_file():
         raise ValueError(f"invalid {input_path=}")
 
     if from_rate is None:
@@ -63,7 +63,7 @@ def atempo_with(
         extra (ProcessingData | None): Additional processing data that may contain audio stream information.
     Returns: The path to the newly created file with adjusted audio tempo.
     """
-    if not input_path.is_file() or not input_path.exists():
+    if not input_path.is_file():
         raise ValueError(f"invalid {input_path=}")
     if not has_audio(input_path):
         raise ValueError(f"input file {input_path} has no audio stream")
@@ -97,7 +97,7 @@ def atempo_video(
         extra (ProcessingData | None): Additional processing data that may contain video stream information.
     Returns: The path to the newly created file with adjusted video tempo.
     """
-    if not input_path.is_file() or not input_path.exists():
+    if not input_path.is_file():
         raise ValueError(f"invalid {input_path=}")
     if not has_video(input_path):
         raise ValueError(f"input file {input_path} has no video stream")

@@ -29,7 +29,7 @@ def delay(
         extra (ProcessingData | None): Additional processing data that may contain audio stream information.
     Returns: The path to the newly created file with the audio delay effect applied.
     """
-    if not input_path.is_file() or not input_path.exists():
+    if not input_path.is_file():
         raise ValueError(f"invalid {input_path=}")
 
     stream = AudioStream.from_file(input_path)[extra.audio_track if extra else 0]
@@ -69,7 +69,7 @@ def hasten(
         extra (ProcessingData | None): Additional processing data that may contain audio stream information.
     Returns: The path to the newly created hastened audio or video file.
     """
-    if not input_path.is_file() or not input_path.exists():
+    if not input_path.is_file():
         raise ValueError(f"invalid {input_path=}")
 
     stream = AudioStream.from_file(input_path)[extra.audio_track if extra else 0]
@@ -104,7 +104,7 @@ def inspect(input_path: Path, output: Path | None = None, force_detection: bool 
         output (Path | None): The path to save the output file.
     Returns: The path to the newly created multimedia file with updated language metadata.
     """
-    if not input_path.is_file() or not input_path.exists():
+    if not input_path.is_file():
         raise ValueError(f"invalid {input_path=}")
 
     output = get_output_file_path(
@@ -167,7 +167,7 @@ def reencode(input_path: Path, quality: EncodingPreset = ENCODING_1080P, output:
         output (Path | None): The path to save the output file.
     Returns: The path to the newly created re-encoded multimedia file.
     """
-    if not input_path.is_file() or not input_path.exists():
+    if not input_path.is_file():
         raise ValueError(f"invalid {input_path=}")
 
     output = get_output_file_path(

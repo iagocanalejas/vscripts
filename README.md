@@ -8,11 +8,12 @@ pip install .
 ### Basic Usage
 
 ```sh
-vscripts do PATH extract generate-subs append
+vscripts do PATH extract generate-subs translate=es append
 # this command will:
 # 1. extract audio from PATH video file
 # 2. generate subtitles for the extracted audio
-# 3. append the generated subtitles to the original video file
+# 3. translate the generated subtitles to Spanish
+# 4. append the generated subtitles to the original video file
 ```
 
 ```sh
@@ -47,6 +48,7 @@ hasten=SECONDS
 inspect
 reencode=PRESET
 generate-subs
+translate=TARGET_LANG
 ```
 
 # Subtitles

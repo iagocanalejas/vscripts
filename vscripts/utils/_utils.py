@@ -2,7 +2,9 @@ import logging
 import os
 import subprocess
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
+
+from whisper.utils import json
 
 from vscripts.constants import HDR_COLOR_TRANSFERS
 
@@ -113,6 +115,15 @@ def has_stream(path: Path, stream_type: Literal["audio", "subtitle", "video"]) -
         "csv=p=0",
     ]
     return bool(run_ffprobe_command(path, command))
+
+
+def get_streams(path: Path) -> list[dict[str, Any]]:
+    command = [
+        "-show_streams",
+        "-print_format",
+        "json",
+    ]
+    return json.loads(run_ffprobe_command(path, command)).get("streams", [])
 
 
 def is_hdr(path: Path) -> bool:

@@ -13,6 +13,7 @@ from ._utils import (
     has_audio as has_audio,
     has_subtitles as has_subtitles,
     has_stream as has_stream,
+    get_streams as get_streams,
     is_hdr as is_hdr,
     to_srt_timestamp as to_srt_timestamp,
 )

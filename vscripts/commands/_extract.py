@@ -26,7 +26,7 @@ def extract(
         output (Path | None): The path to save the output file.
     Returns: The path to the newly created file containing the extracted track.
     """
-    if not input_path.is_file() or not input_path.exists():
+    if not input_path.is_file():
         raise ValueError(f"invalid {input_path=}")
     if output is not None and not output.is_dir():
         raise ValueError(f"invalid {output=}")
@@ -80,7 +80,7 @@ def dissect(input_path: Path, output: Path | None = None, **_) -> Path:
         output (Path | None): The directory to save the dissected streams.
     Returns: The path to the directory containing the dissected streams.
     """
-    if not input_path.is_file() or not input_path.exists():
+    if not input_path.is_file():
         raise ValueError(f"invalid {input_path=}")
 
     output = output if output is not None else input_path.parent

@@ -10,6 +10,12 @@ from vscripts.utils import run_ffprobe_command
 
 logger = logging.getLogger("vscripts")
 
+CODEC_TYPE_VIDEO = "video"
+CODEC_TYPE_AUDIO = "audio"
+CODEC_TYPE_SUBTITLE = "subtitle"
+
+CodecType = Literal["video", "audio", "subtitle"]
+
 
 @dataclass
 class VideoStream:
@@ -18,7 +24,7 @@ class VideoStream:
     duration: str | None = None
     r_frame_rate: float | None = None
     codec_name: str | None = None
-    codec_type: str | None = None
+    codec_type: CodecType | None = None
     format_names: list[str] | None = None
     color_space: str = "bt709"
     color_transfer: str = "bt709"
@@ -74,7 +80,7 @@ class AudioStream:
     file_path: Path = field(init=False)
     duration: str | None = None
     codec_name: str | None = None
-    codec_type: str | None = None
+    codec_type: CodecType | None = None
     r_frame_rate: float | None = None
     format_names: list[str] | None = None
     tags: dict[str, str] = field(default_factory=dict)
@@ -123,7 +129,7 @@ class SubtitleStream:
     index: int
     file_path: Path = field(init=False)
     codec_name: str | None = None
-    codec_type: str | None = None
+    codec_type: CodecType | None = None
     format_names: list[str] | None = None
     tags: dict[str, str] = field(default_factory=dict)
 

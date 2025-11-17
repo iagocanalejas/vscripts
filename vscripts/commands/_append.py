@@ -2,9 +2,9 @@ import logging
 from pathlib import Path
 
 from vscripts.data.models import ProcessingData
-from vscripts.data.streams import AudioStream, SubtitleStream
+from vscripts.data.streams import CODEC_TYPE_AUDIO, CODEC_TYPE_SUBTITLE, AudioStream, SubtitleStream
 from vscripts.utils import get_output_file_path, run_ffmpeg_command
-from vscripts.utils._utils import has_audio
+from vscripts.utils._utils import get_streams, has_audio
 
 logger = logging.getLogger("vscripts")
 
@@ -24,10 +24,13 @@ def append(
         extra (ProcessingData | None): Additional processing data that may contain audio stream information.
     Returns: The path to the newly created file that contains the appended content.
     """
-    if not attachment.is_file() or not attachment.exists():
+    if not attachment.is_file():
         raise ValueError(f"invalid {attachment=}")
-    if not root.is_file() or not root.exists():
+    if not root.is_file():
         raise ValueError(f"invalid {root=}")
+    streams = get_streams(attachment)
+    if len(streams) != 1 or streams[0].get("codec_type") not in [CODEC_TYPE_AUDIO, CODEC_TYPE_SUBTITLE]:
+        raise ValueError(f"{attachment} must contain exactly one stream")
 
     output = get_output_file_path(output or root.parent, f"{root.stem}_appended.mkv")
     if output.suffix.lower() != ".mkv":
@@ -81,9 +84,9 @@ def append_subs(attachment: Path, root: Path, language: str | None = None, outpu
         output (Path | None): The path to save the output file.
     Returns: The path to the newly created video file with subtitles.
     """
-    if not attachment.is_file() or not attachment.exists():
+    if not attachment.is_file():
         raise ValueError(f"invalid {attachment=}")
-    if not root.is_file() or not root.exists():
+    if not root.is_file():
         raise ValueError(f"invalid {root=}")
 
     output = get_output_file_path(output or root.parent, f"{root.stem}_subs{root.suffix}")

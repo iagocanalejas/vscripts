@@ -58,7 +58,7 @@ def chunk_download_url(url: str, output_dir: str, first_chunk: int = 1) -> str:
     return str(file_path)
 
 
-def _detect_file_extension(data):
+def _detect_file_extension(data: bytes) -> str:
     signatures = {
         b"\x00\x00\x00\x18ftyp": ".mp4",
         b"\x1a\x45\xdf\xa3": ".mkv",
