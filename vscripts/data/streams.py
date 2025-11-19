@@ -185,5 +185,5 @@ def _ffprobe_streams(file_path: Path, stream_type: Literal["v", "a", "s"]) -> di
     ]
     result = run_ffprobe_command(file_path, command)
     result = json.loads(result)
-    logger.info(f"found '{stream_type}' stream =\n{json.dumps(result, indent=2)}")
+    logger.debug(f"found '{stream_type}' stream =\n{json.dumps(result, indent=2)}")
     return result

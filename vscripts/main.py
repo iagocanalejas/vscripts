@@ -40,6 +40,7 @@ def main() -> int:
                 actions=args.actions,
                 output=Path(args.output) if args.output else None,
                 force_detection=args.force_detection,
+                translation_mode=args.translation_mode,
             )
         else:
             parser.print_help()
@@ -50,6 +51,12 @@ def _cmd_do(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     parser.add_argument("path", help="path to be handled")
     parser.add_argument("actions", type=str, nargs="*", help="list of actions to be ran")
     parser.add_argument("--force-detection", action="store_true", help="Force overwrite of metadata.", default=False)
+    parser.add_argument(
+        "--translation-mode",
+        choices=["google", "local"],
+        help="Choose translation backend: 'google' or 'local'.",
+        default="local",
+    )
     parser.set_defaults(func=cli.cmd_do)
 
     _set_io(parser)

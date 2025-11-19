@@ -50,7 +50,6 @@ def generate_subtitles(
         default_name=f"{input_path.stem}_{language}.srt",
     )
 
-    # TODO: reel mode
     model = load_whisper("turbo")
     logger.info(f"generating subtitles for {input_path.name} using language='{language}'")
     text = model.transcribe(str(input_path), language=language)

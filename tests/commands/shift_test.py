@@ -3,13 +3,12 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-import whisper
 from vscripts.commands._shift import delay, hasten, inspect, reencode
 from vscripts.constants import ENCODING_1080P
 from vscripts.data.streams import _ffprobe_streams
 from vscripts.utils import get_file_duration, has_audio, has_subtitles
 
-from tests._utils import generate_test_audio, generate_test_full, generate_test_video
+from tests._utils import generate_test_audio, generate_test_full, generate_test_video, test_whisper_model
 
 
 def test_shift_io():
@@ -63,7 +62,7 @@ def test_inspect_adds_language_metadata(tmp_path):
     assert has_audio(video_path)
     assert has_subtitles(video_path)
 
-    with patch("vscripts.data.language.load_whisper", return_value=whisper.load_model("small")):
+    with patch("vscripts.data.language.load_whisper", return_value=test_whisper_model):
         inspected_path = inspect(video_path, force_detection=True)
 
     assert inspected_path.exists(), "Output file should exist"

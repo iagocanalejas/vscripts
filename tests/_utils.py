@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import whisper
 from vscripts.utils import run_ffmpeg_command
 
 
@@ -80,3 +81,6 @@ def generate_test_full(tmp_path: Path, duration: float = 1.0, rate: float = 30.0
     ]
     run_ffmpeg_command(command)
     return output
+
+
+test_whisper_model = whisper.load_model("small")

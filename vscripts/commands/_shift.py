@@ -158,7 +158,12 @@ def inspect(input_path: Path, output: Path | None = None, force_detection: bool 
     return output
 
 
-def reencode(input_path: Path, quality: EncodingPreset = ENCODING_1080P, output: Path | None = None) -> Path:
+def reencode(
+    input_path: Path,
+    quality: EncodingPreset = ENCODING_1080P,
+    output: Path | None = None,
+    extra: ProcessingData | None = None,
+) -> Path:
     """
     Re-encode a multimedia file using HandBrakeCLI with a specified quality preset and save it as a new file.
     Args:

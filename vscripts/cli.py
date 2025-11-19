@@ -15,6 +15,7 @@ from vscripts.constants import (
     COMMAND_EXTRACT,
     COMMAND_HASTEN,
     COMMAND_INSPECT,
+    COMMAND_TRANSLATE,
     NTSC_RATE,
 )
 from vscripts.data.models import ProcessingData
@@ -51,6 +52,14 @@ def cmd_do(input_path: Path, actions: list[str], output: Path | None, **kwargs) 
                 fn = COMMANDS[command]
                 if command == COMMAND_APPEND and args is None:
                     last_path = fn(attachment=last_path, root=path, output=Path(temp_dir), extra=data)
+                elif command == COMMAND_TRANSLATE:
+                    last_path = fn(
+                        last_path,
+                        *args if args is not None else [],
+                        output=Path(temp_dir),
+                        extra=data,
+                        mode=kwargs.get("translation_mode", "local"),
+                    )
                 elif args is not None:
                     last_path = fn(last_path, *args, output=Path(temp_dir), extra=data)
                 else:
@@ -61,7 +70,7 @@ def cmd_do(input_path: Path, actions: list[str], output: Path | None, **kwargs) 
             shutil.move(last_path, output)
         return 0
 
-    if input_path.is_dir():
+    if input_path.is_dir():  # pragma: no cover
         res = 0
         for file in input_path.iterdir():
             if file.is_file():

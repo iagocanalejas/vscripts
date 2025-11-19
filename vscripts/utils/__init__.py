@@ -15,7 +15,12 @@ from ._utils import (
     has_stream as has_stream,
     get_streams as get_streams,
     is_hdr as is_hdr,
+)
+
+from ._srt import (
     to_srt_timestamp as to_srt_timestamp,
+    parse_srt as parse_srt,
+    rebuild_srt as rebuild_srt,
 )
 
 from ._whisper import (
