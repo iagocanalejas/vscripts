@@ -1,6 +1,6 @@
 fast-langdetect==1.0.0
 googletrans==4.0.2
-lhotse==1.31.1
+lhotse==1.32.0
 openai-whisper==20250625
 pyutils @ git+https://github.com/iagocanalejas/pyutils.git@master
 requests==2.32.5
