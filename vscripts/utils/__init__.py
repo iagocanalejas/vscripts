@@ -21,6 +21,8 @@ from ._srt import (
     to_srt_timestamp as to_srt_timestamp,
     parse_srt as parse_srt,
     rebuild_srt as rebuild_srt,
+    flatten_srt_text as flatten_srt_text,
+    count_srt_entries as count_srt_entries,
 )
 
 from ._whisper import (

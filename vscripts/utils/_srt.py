@@ -20,6 +20,24 @@ def parse_srt(content: str) -> list[dict[str, Any]]:
     return blocks
 
 
+def flatten_srt_text(content: str) -> str:
+    lines = []
+    for line in content.splitlines():
+        if line.strip().isdigit() or "-->" in line:
+            continue
+        if line.strip():
+            lines.append(whitespaces_clean(line))
+    return "\n".join(lines)
+
+
+def count_srt_entries(content: str) -> int:
+    count = 0
+    for line in content.splitlines():
+        if line.strip().isdigit():
+            count += 1
+    return count
+
+
 def rebuild_srt(blocks: list[dict[str, Any]], lines: list[str]) -> str:
     index = 0
     out = []

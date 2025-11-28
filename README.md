@@ -51,6 +51,13 @@ generate-subs
 translate=TARGET_LANG
 ```
 
+### Options
+
+```sh
+--force-detection
+--translation-mode=MODE_NAME  # 'local' (default), 'google'
+```
+
 # Subtitles
 
 For each file in <path> tries to find the matching subtitle file in <path> and in '<path>/subs' and append the

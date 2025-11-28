@@ -16,6 +16,8 @@ CODEC_TYPE_SUBTITLE = "subtitle"
 
 CodecType = Literal["video", "audio", "subtitle"]
 
+# TODO: rewrite this as when we extract a video we can retrieve all the streams at once
+
 
 @dataclass
 class VideoStream:
@@ -40,15 +42,7 @@ class VideoStream:
         duration = data.get("duration", None)
         if not duration and "DURATION" in data.get("tags", {}).keys():
             duration_time = data["tags"]["DURATION"]
-            time_obj = datetime.strptime(duration_time[:15], "%H:%M:%S.%f")
-            duration = f"{
-                timedelta(
-                    hours=time_obj.hour,
-                    minutes=time_obj.minute,
-                    seconds=time_obj.second,
-                    microseconds=time_obj.microsecond,
-                ).total_seconds()
-            }"
+            duration = _parse_duration(duration_time)
 
         return VideoStream(
             index=data.get("index", -1),
@@ -90,15 +84,7 @@ class AudioStream:
         duration = data.get("duration", None)
         if not duration and "DURATION" in data.get("tags", {}).keys():
             duration_time = data["tags"]["DURATION"]
-            time_obj = datetime.strptime(duration_time[:15], "%H:%M:%S.%f")
-            duration = f"{
-                timedelta(
-                    hours=time_obj.hour,
-                    minutes=time_obj.minute,
-                    seconds=time_obj.second,
-                    microseconds=time_obj.microsecond,
-                ).total_seconds()
-            }"
+            duration = _parse_duration(duration_time)
 
         return AudioStream(
             index=data.get("index", -1),
@@ -156,6 +142,23 @@ class SubtitleStream:
         stream = cls.from_file(file_path)[int(track)]
         stream.file_path = file_path
         return stream
+
+
+def _parse_duration(duration: str | None) -> str | None:
+    if duration is None:
+        return None
+    if "," in duration:
+        time_obj = datetime.strptime(duration[:15], "%H:%M:%S,%f")
+    else:
+        time_obj = datetime.strptime(duration[:15], "%H:%M:%S.%f")
+    return f"{
+        timedelta(
+            hours=time_obj.hour,
+            minutes=time_obj.minute,
+            seconds=time_obj.second,
+            microseconds=time_obj.microsecond,
+        ).total_seconds()
+    }"
 
 
 def _parse_frame_rate(frame_rate: str | None) -> float | None:

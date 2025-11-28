@@ -16,7 +16,6 @@ classifiers = [
 ]
 dependencies = [
   "fast-langdetect",
-  "lhotse",
   "openai-whisper",
   "pyutils @ git+https://github.com/iagocanalejas/pyutils.git@master",
   "requests",

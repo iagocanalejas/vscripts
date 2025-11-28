@@ -84,6 +84,8 @@ def dissect(input_path: Path, output: Path | None = None, **_) -> Path:
         raise ValueError(f"invalid {input_path=}")
 
     output = output if output is not None else input_path.parent
+    if not output.exists():
+        output.mkdir(parents=True, exist_ok=True)
     if not output.is_dir():
         raise ValueError(f"invalid {output=}")
 
