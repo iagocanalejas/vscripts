@@ -23,6 +23,9 @@ class TestNameMatcher(unittest.TestCase):
         matcher = NameMatcher("Wolverine_e_os_X-Men-01-Retrospectiva-Parte_I-BDRip-720p-[Sub]-[Galego-English].mkv")
         self.assertEqual(NameMatcher.Type.CAP, matcher.classify())
 
+        matcher = NameMatcher("Gen V [HDTV 720p]][Cap.101](wolfmax4k.com).mkv")
+        self.assertEqual(NameMatcher.Type.CAP_DOT_NAME, matcher.classify())
+
     def test_clean(self):
         matcher = NameMatcher("Los Simpson - 2x04 - Dos Coches En Cada.avi")
         self.assertEqual("Los Simpson - S02E04 - Dos Coches En Cada.mkv", matcher.clean())
@@ -50,3 +53,9 @@ class TestNameMatcher(unittest.TestCase):
 
         matcher = NameMatcher("Wolverine_e_os_X-Men-01-Retrospectiva-Parte_I-BDRip-720p-[Sub]-[Galego-English].mkv")
         self.assertEqual("Wolverine e os X - Men - 01 - Retrospectiva - Parte I.mkv", matcher.clean())
+
+        matcher = NameMatcher("Gen.V.S01E01.God.U.2160p.10bit.AMZN.WEB-DL.DDP5.1.HEVC-Vyndros.mkv")
+        self.assertEqual("Gen V - S01E01 - God U.mkv", matcher.clean())
+
+        matcher = NameMatcher("Gen V [HDTV 720p]][Cap.101](wolfmax4k.com).mkv")
+        self.assertEqual("Gen V - S01E01.mkv", matcher.clean())

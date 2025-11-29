@@ -36,7 +36,7 @@ def append(
     if output.suffix.lower() != ".mkv":
         raise ValueError("output file must be an MKV file")
 
-    logger.info(f"appending {attachment.name} into {root.name}\n\toutputting to {output}")
+    logger.info(f"appending {attachment.name} into {root.name}\n\toutputing to {output}")
     command = ["-i", str(root), "-i", str(attachment), "-map", "0:v?"]
 
     if has_audio(attachment):
@@ -91,7 +91,7 @@ def append_subs(attachment: Path, root: Path, language: str | None = None, outpu
 
     output = get_output_file_path(output or root.parent, f"{root.stem}_subs{root.suffix}")
 
-    logger.info(f"appending subtitles {attachment.name} into {root.name}\n\toutputting to {output}")
+    logger.info(f"appending subtitles {attachment.name} into {root.name}\n\toutputing to {output}")
     command = [
         "-i",
         str(root),

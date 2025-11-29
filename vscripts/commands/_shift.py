@@ -39,7 +39,7 @@ def delay(
         default_name=f"{input_path.stem}_delayed_{delay}{suffix}",
     )
 
-    logger.info(f"applying audio {delay=}ms to {input_path.name}\n\toutputting to {output}")
+    logger.info(f"applying audio {delay=}ms to {input_path.name}\n\toutputing to {output}")
     command = [
         "-i",
         str(input_path),
@@ -79,7 +79,7 @@ def hasten(
         default_name=f"{input_path.stem}_hastened_{hasten_factor}{suffix}",
     )
 
-    logger.info(f"adjusting playback speed of {input_path.name} by hasten={hasten_factor}\n\toutputting to {output}")
+    logger.info(f"adjusting playback speed of {input_path.name} by hasten={hasten_factor}\n\toutputing to {output}")
     command = [
         "-i",
         str(input_path),
@@ -141,7 +141,7 @@ def inspect(input_path: Path, output: Path | None = None, force_detection: bool 
         logger.info("no metadata to add, skipping processing")
         return input_path
 
-    logger.info(f"inspecting {input_path.name}\n\toutputting to {output}")
+    logger.info(f"inspecting {input_path.name}\n\toutputing to {output}")
     command = [
         "-i",
         str(input_path),
@@ -180,7 +180,7 @@ def reencode(
         default_name=f"{input_path.stem}_{quality}.mkv",
     )
 
-    logger.info(f"re-encoding {input_path.name} with {quality=}\n\toutputting to {output}")
+    logger.info(f"re-encoding {input_path.name} with {quality=}\n\toutputing to {output}")
     command = [f"--preset={ENCODING_PRESETS[quality]}"]
     if is_hdr(input_path):
         command += ["--colorspace=bt709"]

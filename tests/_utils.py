@@ -47,7 +47,12 @@ def generate_test_video(path: Path, duration: float = 1.0, rate: float = 30.0) -
     return path
 
 
-def generate_test_full(tmp_path: Path, duration: float = 1.0, rate: float = 30.0) -> Path:
+def generate_test_full(
+    tmp_path: Path,
+    duration: float = 1.0,
+    rate: float = 30.0,
+    output_name: str = "full_video.mp4",
+) -> Path:
     video_path = tmp_path / "video.mp4"
     subs_path = tmp_path / "subs.srt"
     audio_path = tmp_path / "audio.mp3"
@@ -55,7 +60,7 @@ def generate_test_full(tmp_path: Path, duration: float = 1.0, rate: float = 30.0
     generate_test_audio(audio_path, duration=duration)
     generate_test_subs(subs_path)
 
-    output = tmp_path / "full_video.mp4"
+    output = tmp_path / output_name
 
     command = [
         "-i",

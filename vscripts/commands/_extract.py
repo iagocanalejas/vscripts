@@ -38,7 +38,7 @@ def extract(
 
     with create_temp_dir() as temp_dir:
         temp_output = Path(temp_dir) / f"temp_extracted.{suffix}"
-        logger.info(f"extracting {stream_type} {track=} from {input_path.name}\n\toutputting to {temp_output}")
+        logger.info(f"extracting {stream_type} {track=} from {input_path.name}\n\toutputing to {temp_output}")
         command = ["-i", str(input_path), "-map", f"0:{ffmpeg_type}:{track}", "-map_metadata", "0"]
         command += ffmpeg_copy_by_codec(stream.codec_name)
         command.append(str(temp_output))
@@ -94,7 +94,7 @@ def dissect(input_path: Path, output: Path | None = None, **_) -> Path:
     subtitle_streams = SubtitleStream.from_file(input_path)
 
     if video_stream is not None:
-        logger.info(f"excracting video stream ({video_stream.codec_name})")
+        logger.info(f"extracting video stream ({video_stream.codec_name})")
         command = [
             "-i",
             str(input_path),
@@ -104,11 +104,11 @@ def dissect(input_path: Path, output: Path | None = None, **_) -> Path:
             "0",
             "-c",
             "copy",
-            str(output / f"stream_{video_stream.index:03d}.{video_stream.codec_name}"),
+            str(output / f"stream_{video_stream.index:03d}.mkv"),
         ]
         run_ffmpeg_command(command)
 
-    logger.info(f"excracting {len(audio_streams)} audio streams")
+    logger.info(f"extracting {len(audio_streams)} audio streams")
     for stream in audio_streams:
         logger.info(f"\t- audio stream {stream.index} ({stream.codec_name})")
         command = [
@@ -124,7 +124,7 @@ def dissect(input_path: Path, output: Path | None = None, **_) -> Path:
         ]
         run_ffmpeg_command(command)
 
-    logger.info(f"excracting {len(subtitle_streams)} subtitle streams")
+    logger.info(f"extracting {len(subtitle_streams)} subtitle streams")
     for stream in subtitle_streams:
         logger.info(f"\t- subtitle stream {stream.index} ({stream.codec_name})")
         command = [

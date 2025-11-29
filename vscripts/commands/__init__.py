@@ -44,6 +44,10 @@ from ._generate import (
     generate_subtitles as generate_subtitles,
 )
 
+from ._merge import (
+    merge as merge,
+)
+
 from ._translate import (
     translate_subtitles as translate_subtitles,
 )

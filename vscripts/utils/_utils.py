@@ -28,7 +28,7 @@ def ffmpeg_copy_by_codec(codec: str | None) -> list[str]:
 def suffix_by_codec(codec: str | None, codec_type: Literal["audio", "subtitle"]) -> str:
     if not codec:
         return "m4a" if codec_type == "audio" else "srt"
-    if codec.lower() == "mov_text":
+    if codec.lower() == "mov_text" or codec.lower() == "subrip":
         return "srt"
     if codec.lower() == "ac3":
         return "mka"
@@ -137,3 +137,31 @@ def is_hdr(path: Path) -> bool:
     ]
     result = run_ffprobe_command(path, command)
     return any(h in result.lower() for h in HDR_COLOR_TRANSFERS)
+
+
+VIDEO_EXTENSIONS = {".mp4", ".mkv", ".mov", ".avi", ".webm", ".hevc", ".h264"}
+AUDIO_EXTENSIONS = {".mp3", ".wav", ".flac", ".aac", ".ogg", ".eac3", ".ac3", ".m4a", ".mka"}
+SUBTITLE_EXTENSIONS = {".srt", ".vtt", ".ass", ".ssa"}
+
+
+def is_subs(path: Path) -> bool:
+    return path.suffix.lower() in SUBTITLE_EXTENSIONS
+
+
+def is_audio(path: Path) -> bool:
+    return path.suffix.lower() in AUDIO_EXTENSIONS
+
+
+def is_video(path: Path) -> bool:
+    return path.suffix.lower() in VIDEO_EXTENSIONS
+
+
+def infer_media_type(path: Path) -> Literal["video", "audio", "subtitle", "unknown"]:
+    ext = path.suffix.lower()
+    if ext in VIDEO_EXTENSIONS:
+        return "video"
+    if ext in AUDIO_EXTENSIONS:
+        return "audio"
+    if ext in SUBTITLE_EXTENSIONS:
+        return "subtitle"
+    return "unknown"

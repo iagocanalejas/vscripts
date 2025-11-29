@@ -25,6 +25,7 @@ def main() -> int:
 
     subparsers = parser.add_subparsers(dest="command")
     _cmd_do(_add_cmd("do", help="Run the given instructions on a file."))
+    _cmd_merge(_add_cmd("merge", help="Merge multiple files into one."))
     args = parser.parse_args()
 
     print_logo()
@@ -42,6 +43,12 @@ def main() -> int:
                 force_detection=args.force_detection,
                 translation_mode=args.translation_mode,
             )
+        elif args.command == "merge":
+            return cli.cmd_merge(
+                Path(args.path),
+                Path(args.data),
+                output=Path(args.output) if args.output else None,
+            )
         else:
             parser.print_help()
             return 1
@@ -58,6 +65,15 @@ def _cmd_do(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
         default="local",
     )
     parser.set_defaults(func=cli.cmd_do)
+
+    _set_io(parser)
+    return parser
+
+
+def _cmd_merge(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
+    parser.add_argument("path", help="path to be handled")
+    parser.add_argument("data", help="path with the extra data to merge")
+    parser.set_defaults(func=cli.cmd_merge)
 
     _set_io(parser)
     return parser

@@ -51,6 +51,7 @@ def find_subs_language(
     stream: SubtitleStream,
     model_name: WhisperModel = "medium",
     force_detection: bool = False,
+    only_metadata: bool = False,
 ) -> str:
     """
     Detect the language of a subtitle stream using its content.
@@ -58,6 +59,7 @@ def find_subs_language(
         stream (SubtitleStream): The subtitle stream to analyze.
         model_name (FastLangDetectModel): The language detection model to use.
         force_detection (bool): Whether to force detection even if metadata exists.
+        only_metadata (bool): If True, only use existing metadata without detection.
     Returns:
         str: The detected language code in ISO 639-3 format, or "unk" if undetermined.
     """
@@ -68,6 +70,10 @@ def find_subs_language(
             lang = _convert_lang_code(lang)
             logger.info(f"using existing subtitle language metadata: {lang}")
             return lang
+
+    if only_metadata:
+        logger.info(f"{only_metadata=}, skipping audio language detection")
+        return UNKNOWN_LANGUAGE
 
     with stream.file_path.open("r", encoding="utf-8", errors="ignore") as f:
         content = f.read()

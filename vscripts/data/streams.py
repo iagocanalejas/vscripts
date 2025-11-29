@@ -71,13 +71,39 @@ class VideoStream:
 @dataclass
 class AudioStream:
     index: int
+    bit_rate: int
+    sample_rate: int
+    channels: int
+    sample_fmt: str | None
+    language: str | None = None
     file_path: Path = field(init=False)
     duration: str | None = None
     codec_name: str | None = None
     codec_type: CodecType | None = None
-    r_frame_rate: float | None = None
     format_names: list[str] | None = None
     tags: dict[str, str] = field(default_factory=dict)
+
+    @property
+    def score(self) -> int:
+        lossless_codecs = {"flac", "alac", "wavpack", "pcm_s16le", "pcm_s24le", "pcm_s32le", "pcm_s32be"}
+
+        score = 0
+
+        if self.codec_name in lossless_codecs:
+            score += 10_000_000
+
+        score += self.bit_rate
+        fmt_score = {
+            "pcm_s32le": 300000,
+            "pcm_s32be": 300000,
+            "pcm_s24le": 200000,
+            "pcm_s16le": 100000,
+        }
+        score += fmt_score.get(self.sample_fmt or "", 0)
+        score += self.sample_rate
+        score += self.channels * 100
+
+        return score
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "AudioStream":
@@ -91,6 +117,10 @@ class AudioStream:
             codec_name=data.get("codec_name"),
             codec_type=data.get("codec_type"),
             duration=duration,
+            bit_rate=int(data.get("bit_rate", 0) or 0),
+            sample_rate=int(data.get("sample_rate", 0) or 0),
+            channels=int(data.get("channels", 0) or 0),
+            sample_fmt=data.get("sample_fmt", None),
             tags=data.get("tags", {}),
         )
 
@@ -113,11 +143,13 @@ class AudioStream:
 @dataclass
 class SubtitleStream:
     index: int
+    language: str | None = None
     file_path: Path = field(init=False)
     codec_name: str | None = None
     codec_type: CodecType | None = None
     format_names: list[str] | None = None
     tags: dict[str, str] = field(default_factory=dict)
+    default: bool = False
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "SubtitleStream":
@@ -178,7 +210,7 @@ def _ffprobe_streams(file_path: Path, stream_type: Literal["v", "a", "s"]) -> di
         "-select_streams",
         stream_type,
         "-show_entries",
-        "stream=index,duration,r_frame_rate,codec_name,codec_type,color_space,color_transfer,color_primaries",
+        "stream=index,duration,r_frame_rate,codec_name,codec_type,color_space,color_transfer,color_primaries,bit_rate,sample_rate,channels,sample_fmt",
         "-show_entries",
         "format=format_name",
         "-show_entries",

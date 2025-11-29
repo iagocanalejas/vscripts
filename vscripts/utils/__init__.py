@@ -15,6 +15,13 @@ from ._utils import (
     has_stream as has_stream,
     get_streams as get_streams,
     is_hdr as is_hdr,
+    infer_media_type as infer_media_type,
+    is_subs as is_subs,
+    is_audio as is_audio,
+    is_video as is_video,
+    VIDEO_EXTENSIONS as VIDEO_EXTENSIONS,
+    AUDIO_EXTENSIONS as AUDIO_EXTENSIONS,
+    SUBTITLE_EXTENSIONS as SUBTITLE_EXTENSIONS,
 )
 
 from ._srt import (
