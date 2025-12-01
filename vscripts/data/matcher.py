@@ -5,6 +5,7 @@ from enum import StrEnum
 from pyutils.strings import remove_hyphens, whitespaces_clean
 
 
+# TODO: this can be improved
 class NameMatcher:
     class Type(StrEnum):
         X_NAME = "season_x_episode"
@@ -42,6 +43,12 @@ class NameMatcher:
         cleaning_method = cleaning_methods.get(ttype, lambda: self.name)
         return cleaning_method()
 
+    def season_episode(self) -> tuple[int, int]:
+        name = self.clean()
+        match = re.search(r"S(\d{2})E(\d{2})", name, flags=re.IGNORECASE)
+        assert match is not None, f"could not extract season and episode from {name}"
+        return int(match.group(1)), int(match.group(2))
+
     def _clean_season_x_episode(self) -> str:
         name = self._clean_after_resolution(self.name)
         name = self._clean_suffixes(name)
@@ -71,18 +78,20 @@ class NameMatcher:
         return f"{os.path.splitext(name)[0]}.mkv"
 
     def _clean_cap_dot_season_episode(self) -> str:
-        match = re.match(r".*cap (\d{1,2})(\d{2}).*", self.name, flags=re.IGNORECASE)
-
-        name = self._clean_after_resolution(self.name)
-        name = self._clean_suffixes(name)
+        name = self.name
+        match = re.match(r".*cap (\d{1,2})(\d{2}).*", name, flags=re.IGNORECASE)
 
         if not match:
+            name = self._clean_after_resolution(name)
+            name = self._clean_suffixes(name)
+
             match = re.match(r".*cap (\d{1,2})(\d{2}).*", name, flags=re.IGNORECASE)
             assert match is not None, f"could not match cap number in {name}"
 
-        show_name = name.split(" - ")[0].strip()
         season = match.group(1)
         episode = match.group(2)
+
+        show_name = name.split(" - ")[0].split("[")[0].strip()
 
         return whitespaces_clean(f"{show_name} - S{int(season):02d}E{int(episode):02d}.mkv")
 
@@ -122,7 +131,7 @@ class NameMatcher:
     def _clean_after_resolution(self, name: str) -> str:
         # remove everything after resolution except the extension
         name = re.sub(r" ?\d+p.*(\.\w{3})", r"\1", name, flags=re.IGNORECASE)
-        name = re.sub(r" (?:DVDRIP|DVBRIP|BDRIP|WEBDL).*(\.\w{3})", "\1", name, flags=re.IGNORECASE)
+        name = re.sub(r" (?:DVDRIP|DVBRIP|BDRIP|WEBDL|HDTV).*(\.\w{3})", "\1", name, flags=re.IGNORECASE)
         name = name.replace("\x01", "")
         return whitespaces_clean(name)
 

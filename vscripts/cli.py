@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from pyutils.paths import create_temp_dir
-from vscripts.commands import COMMANDS
+from vscripts.commands import COMMANDS, merge
 from vscripts.constants import (
     COMMAND_APPEND,
     COMMAND_ATEMPO,
@@ -18,6 +18,7 @@ from vscripts.constants import (
     COMMAND_TRANSLATE,
     NTSC_RATE,
 )
+from vscripts.data.matcher import NameMatcher
 from vscripts.data.models import ProcessingData
 
 logger = logging.getLogger("vscripts")
@@ -97,3 +98,31 @@ def _parse_actions(actions: list[str]) -> OrderedDict[str, list[Any] | None]:
         else:
             parsed_actions[action] = None
     return parsed_actions
+
+
+def cmd_merge(target_path: Path, data_path: Path, output: Path | None, **kwargs) -> int:
+    if (target_path.is_file() and not data_path.is_file()) or (target_path.is_dir() and not data_path.is_dir()):
+        raise ValueError("Both target and data paths must be of the same type (file or directory).")
+
+    def inner_merge(target: Path, output: Path | None) -> int:
+        data_file = data_path
+        target_matcher = NameMatcher(str(target.name))
+        if not data_file.is_file():  # pragma: no cover
+            for f in data_path.iterdir():
+                if NameMatcher(f.name).season_episode() == target_matcher.season_episode():
+                    logger.info(f"matched {f.name} with {target.name}")
+                    data_file = f
+                    break
+        if not data_file.is_file():
+            raise ValueError(f"No matching data file found for target {target} in {data_path}")
+
+        merge(target, data_file, output=output if output else target.parent / target_matcher.clean())
+        return 0
+
+    if target_path.is_dir():  # pragma: no cover
+        res = 0
+        for file in target_path.iterdir():
+            if file.is_file():
+                res += inner_merge(file, output=output)
+        return res
+    return inner_merge(target_path, output)
