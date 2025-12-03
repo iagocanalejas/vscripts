@@ -5,27 +5,29 @@ from unittest.mock import patch
 import pytest
 from vscripts.commands import merge
 from vscripts.commands._merge import _retrieve_data_streams, _retrieve_target_streams
-from vscripts.data.streams import AudioStream, SubtitleStream, VideoStream
-from vscripts.utils import FFPROBE_BASE_COMMAND, has_video
+from vscripts.data.streams import AudioStream, FileStreams, SubtitleStream
+from vscripts.utils import FFPROBE_BASE_COMMAND
 
 from tests._utils import (
     generate_test_audio,
     generate_test_full,
     generate_test_subs,
-    generate_test_video,
+    has_video,
 )
 
 
-def test_merge_io():
+def test_merge_io(tmp_path):
+    streams = FileStreams.from_file(generate_test_full(tmp_path, duration=1))
+    assert streams.video is not None, "Test file must have a video stream"
     with pytest.raises(ValueError):
-        merge(Path("non_existent_file.wav"), Path("data_file.wav"), output=None)
+        streams.video.file_path = Path("non_existent_file.wav")
+        merge(streams, streams, output=None)
 
 
 @pytest.mark.integration
 def test_merge_two_videos(tmp_path):
     target_path = generate_test_full(tmp_path, duration=1)
     data_path = generate_test_full(tmp_path, duration=1, output_name="data_video.mp4")
-    video_stream = VideoStream.from_file(generate_test_video(tmp_path / "video_only.mp4", duration=1))
     audio1_stream = AudioStream.from_file(generate_test_audio(tmp_path / "audio1.mp3", duration=1))[0]
     audio2_stream = AudioStream.from_file(generate_test_audio(tmp_path / "audio2.mp3", duration=1))[0]
     subs1_stream = SubtitleStream.from_file(generate_test_subs(tmp_path / "subs1.srt"))[0]
@@ -41,19 +43,19 @@ def test_merge_two_videos(tmp_path):
     with (
         patch(
             "vscripts.commands._merge._retrieve_target_streams",
-            return_value=(video_stream, [audio1_stream], [subs1_stream]),
+            return_value=([audio1_stream], [subs1_stream]),
         ),
         patch(
             "vscripts.commands._merge._retrieve_data_streams",
             return_value=([audio2_stream], [subs2_stream]),
         ),
     ):
-        merged_output = merge(target_path, data_path, output=output_path)
+        merged_output = merge(FileStreams.from_file(target_path), FileStreams.from_file(data_path), output=output_path)
 
-    assert merged_output.exists()
-    assert merged_output.stat().st_size > 0
-    assert output_path == merged_output
-    assert has_video(merged_output)
+    assert merged_output.file_path.exists()
+    assert merged_output.file_path.stat().st_size > 0
+    assert output_path == merged_output.file_path
+    assert has_video(merged_output.file_path)
 
     out = subprocess.check_output(
         FFPROBE_BASE_COMMAND
@@ -64,7 +66,7 @@ def test_merge_two_videos(tmp_path):
             "stream=index",
             "-of",
             "csv=p=0",
-            str(merged_output),
+            str(merged_output.file_path),
         ]
     )
     audio_stream_lines = [line for line in out.decode().strip().splitlines() if line.strip()]
@@ -79,7 +81,7 @@ def test_merge_two_videos(tmp_path):
             "stream=index",
             "-of",
             "csv=p=0",
-            str(merged_output),
+            str(merged_output.file_path),
         ]
     )
     subtitle_stream_lines = [line for line in out.decode().strip().splitlines() if line.strip()]
@@ -90,7 +92,6 @@ def test_merge_two_videos(tmp_path):
 def test_merge_two_videos_forced_subs(tmp_path):
     target_path = generate_test_full(tmp_path, duration=1)
     data_path = generate_test_full(tmp_path, duration=1, output_name="data_video.mp4")
-    video_stream = VideoStream.from_file(generate_test_video(tmp_path / "video_only.mp4", duration=1))
     audio1_stream = AudioStream.from_file(generate_test_audio(tmp_path / "audio1.mp3", duration=1))[0]
     audio2_stream = AudioStream.from_file(generate_test_audio(tmp_path / "audio2.mp3", duration=1))[0]
     subs1_stream = SubtitleStream.from_file(generate_test_subs(tmp_path / "subs1.srt"))[0]
@@ -109,7 +110,7 @@ def test_merge_two_videos_forced_subs(tmp_path):
     with (
         patch(
             "vscripts.commands._merge._retrieve_target_streams",
-            return_value=(video_stream, [audio1_stream], [subs1_stream]),
+            return_value=([audio1_stream], [subs1_stream]),
         ),
         patch(
             "vscripts.commands._merge._retrieve_data_streams",
@@ -120,12 +121,12 @@ def test_merge_two_videos_forced_subs(tmp_path):
             return_value=subs3_stream,
         ),
     ):
-        merged_output = merge(target_path, data_path, output=output_path)
+        merged_output = merge(FileStreams.from_file(target_path), FileStreams.from_file(data_path), output=output_path)
 
-    assert merged_output.exists()
-    assert merged_output.stat().st_size > 0
-    assert output_path == merged_output
-    assert has_video(merged_output)
+    assert merged_output.file_path.exists()
+    assert merged_output.file_path.stat().st_size > 0
+    assert output_path == merged_output.file_path
+    assert has_video(merged_output.file_path)
 
     out = subprocess.check_output(
         FFPROBE_BASE_COMMAND
@@ -136,7 +137,7 @@ def test_merge_two_videos_forced_subs(tmp_path):
             "stream=index",
             "-of",
             "csv=p=0",
-            str(merged_output),
+            str(merged_output.file_path),
         ]
     )
     audio_stream_lines = [line for line in out.decode().strip().splitlines() if line.strip()]
@@ -151,7 +152,7 @@ def test_merge_two_videos_forced_subs(tmp_path):
             "stream=index",
             "-of",
             "csv=p=0",
-            str(merged_output),
+            str(merged_output.file_path),
         ]
     )
     subtitle_stream_lines = [line for line in out.decode().strip().splitlines() if line.strip()]
@@ -160,45 +161,29 @@ def test_merge_two_videos_forced_subs(tmp_path):
 
 @pytest.mark.integration
 def test__retrieve_target_streams(tmp_path):
-    video_stream = VideoStream.from_file(generate_test_video(tmp_path / "video_only.mp4", duration=1))
-    audio_stream = AudioStream.from_file(generate_test_audio(tmp_path / "audio1.mp3", duration=1))[0]
-    audio_stream.tags["language"] = "en"
-    subs_stream = SubtitleStream.from_file(generate_test_subs(tmp_path / "subs1.srt"))[0]
-    subs_stream.tags["language"] = "en"
+    video = generate_test_full(tmp_path, duration=1)
+    data = FileStreams.from_file(video)
+    data.audios[0].language = "eng"
+    data.subtitles[0].language = "eng"
 
-    with (
-        patch(
-            "vscripts.commands._merge.VideoStream.from_file",
-            return_value=video_stream,
-        ),
-        patch(
-            "vscripts.commands._merge.AudioStream.from_file",
-            return_value=[audio_stream],
-        ),
-        patch(
-            "vscripts.commands._merge.SubtitleStream.from_file",
-            return_value=[subs_stream],
-        ),
-    ):
-        v_stream, a_streams, s_streams = _retrieve_target_streams(tmp_path)
+    a_streams, s_streams = _retrieve_target_streams(data)
 
-    assert v_stream == video_stream
-    assert a_streams == [audio_stream]
-    assert s_streams == [subs_stream]
+    assert a_streams == [data.audios[0]]
+    assert s_streams == [data.subtitles[0]]
 
 
 @pytest.mark.integration
 def test__retrieve_data_streams(tmp_path):
-    audio_stream = AudioStream.from_file(generate_test_audio(tmp_path / "audio1.mp3", duration=1))[0]
-    audio_stream.tags["language"] = "es"
-    subs_stream = SubtitleStream.from_file(generate_test_subs(tmp_path / "subs1.srt"))[0]
-    subs_stream.tags["language"] = "es"
+    video = generate_test_full(tmp_path, duration=1)
+    data = FileStreams.from_file(video)
+    data.audios[0].tags["language"] = "es"
+    data.subtitles[0].tags["language"] = "es"
 
     with (
         patch("vscripts.commands._merge.find_audio_language", return_value="spa"),
         patch("vscripts.commands._merge.find_subs_language", return_value="spa"),
     ):
-        a_streams, s_streams = _retrieve_data_streams(tmp_path)
+        a_streams, s_streams = _retrieve_data_streams(data)
 
     assert len(a_streams) == 1
     assert len(s_streams) == 1

@@ -5,34 +5,41 @@ from pathlib import Path
 from pyutils.paths import create_temp_dir
 from vscripts.commands._extract import dissect
 from vscripts.data.language import find_audio_language, find_subs_language
-from vscripts.data.streams import AudioStream, SubtitleStream, VideoStream
-from vscripts.utils import count_srt_entries, get_output_file_path, infer_media_type, is_subs, run_ffmpeg_command
+from vscripts.data.streams import AudioStream, FileStreams, SubtitleStream
+from vscripts.utils import count_srt_entries, get_output_file_path, run_ffmpeg_command
 
 logger = logging.getLogger("vscripts")
 
 
-def merge(target: Path, data: Path, *, output: Path | None, **_) -> Path:
+def merge(target: FileStreams, data: FileStreams, *, output: Path | None) -> FileStreams:
     """
     Merges audio and subtitle streams from `data` into the `target` video file.
     Args:
-        target (Path): The path to the target video file.
-        data (Path): The path to the file containing audio and subtitle streams to merge.
+        target (FileStreams): The target FileStreams object containing the video stream.
+        data (FileStreams): The data FileStreams object containing audio and subtitle streams to merge.
         output (Path | None): The output path for the merged file. If None, defaults to the target's parent directory.
-    Returns: The path to the merged output file.
+    Returns: The FileStreams object representing the merged file.
     """
-    video: VideoStream | None = None
+
+    if target.video is None:
+        raise ValueError("no video stream found in target file")
+
     audios: list[AudioStream] = []
     subtitles: list[SubtitleStream] = []
 
-    output = get_output_file_path(output or target.parent, f"{target.stem}_merged.mkv")
+    output = get_output_file_path(
+        output or target.file_path.parent,
+        default_name=f"{target.file_path.stem}_merged.mkv",
+    )
 
     with create_temp_dir() as temp_dir:
         logger.info(f"using temporary directory {temp_dir}")
-        target_path = dissect(target, output=Path(temp_dir) / target.stem)
-        data_path = dissect(data, output=Path(temp_dir) / data.stem)
+        target = dissect(target, output=Path(temp_dir) / target.file_path.stem)
+        data = dissect(data, output=Path(temp_dir) / data.file_path.stem)
+        assert target.video is not None, "video stream should not be None after dissecting"
 
-        video, target_audios, target_subs = _retrieve_target_streams(target_path)
-        data_audios, data_subs = _retrieve_data_streams(data_path)
+        target_audios, target_subs = _retrieve_target_streams(target)
+        data_audios, data_subs = _retrieve_data_streams(data)
 
         if len(data_audios) == 0:
             raise ValueError("no valid audio streams found in data file to merge")
@@ -45,7 +52,7 @@ def merge(target: Path, data: Path, *, output: Path | None, **_) -> Path:
 
         # check for forced subtitles in data, using duration of the first audio stream
         duration = float(data_audios[0].duration) if data_audios[0].duration else 0
-        forced_subs = _retrieve_forced_subs(data_path, duration=duration)
+        forced_subs = _retrieve_forced_subs(data, duration=duration)
         if forced_subs is not None:
             for sub in subtitles:
                 if sub.file_path == forced_subs.file_path:
@@ -54,7 +61,7 @@ def merge(target: Path, data: Path, *, output: Path | None, **_) -> Path:
             else:
                 subtitles.append(forced_subs)
 
-        command = ["-i", str(video.file_path)]
+        command = ["-i", str(target.video.file_path)]
 
         for audio in audios:
             command += ["-i", str(audio.file_path)]
@@ -66,13 +73,11 @@ def merge(target: Path, data: Path, *, output: Path | None, **_) -> Path:
 
         for i in range(len(audios)):
             command += ["-map", f"{i + 1}:a"]
-            lang = audios[i].language if audios[i].language is not None else "und"
-            command += [f"-metadata:s:a:{i}", f"language={lang}"]
+            command += [f"-metadata:s:a:{i}", f"language={audios[i].language}"]
 
         for i in range(len(subtitles)):
             command += ["-map", f"{i + 1 + len(audios)}:s"]
-            lang = subtitles[i].language if subtitles[i].language is not None else "und"
-            command += [f"-metadata:s:s:{i}", f"language={lang}"]
+            command += [f"-metadata:s:s:{i}", f"language={subtitles[i].language}"]
             if subtitles[i].default:
                 command += [f"-disposition:s:{i}", "default"]
 
@@ -81,81 +86,51 @@ def merge(target: Path, data: Path, *, output: Path | None, **_) -> Path:
 
         logger.info(f"merging f{data} into {target}\n\toutputing to {output}")
         run_ffmpeg_command(command)
-        return output
+
+        new_streams = FileStreams(video=target.video, audios=audios, subtitles=subtitles)
+        return new_streams.copy(with_new_path=output)
 
 
-def _retrieve_target_streams(target_path: Path) -> tuple[VideoStream, list[AudioStream], list[SubtitleStream]]:
-    video_stream: VideoStream | None = None
+def _retrieve_target_streams(data: FileStreams) -> tuple[list[AudioStream], list[SubtitleStream]]:
     audio_streams: list[AudioStream] = []
     subtitle_streams: list[SubtitleStream] = []
 
-    for file in target_path.iterdir():
-        if not file.is_file():
-            logger.warning(f"skipping non-file {file} in dissected target path (should not happen)")
-            continue
+    for audio_stream in data.audios:
+        lang = find_audio_language(audio_stream)
+        if lang in ["eng"]:
+            logger.info(f"found audio {lang=} stream in target")
+            audio_stream.language = lang
+            audio_streams.append(audio_stream)
+        if lang in ["spa", "glg"]:
+            logger.warning(f"found audio {lang=} stream in target, skipping")
 
-        ext = infer_media_type(file)
-        if ext == "video":
-            logger.info(f"using video stream in target file: {file}")
-            video_stream = VideoStream.from_file(file)
-            continue
-        elif ext == "audio":
-            audio_stream = AudioStream.from_file(file)[0]
-            lang = find_audio_language(audio_stream)
-            if lang in ["eng"]:
-                logger.info(f"found audio {lang=} stream in target")
-                audio_stream.language = lang
-                audio_streams.append(audio_stream)
-            if lang in ["spa", "glg"]:
-                logger.warning(f"found audio {lang=} stream in target, skipping")
-            continue
-        elif ext == "subtitle":
-            subtitle_stream = SubtitleStream.from_file(file)[0]
-            lang = find_subs_language(subtitle_stream)
-            if lang in ["eng", "spa", "glg"]:
-                logger.info(f"found subtitle {lang=} stream in target")
-                subtitle_stream.language = lang
-                subtitle_streams.append(subtitle_stream)
-            continue
-        else:
-            logger.warning(f"skipping {ext} stream in {file}")
-            continue
+    for subtitle_stream in data.subtitles:
+        lang = find_subs_language(subtitle_stream)
+        if lang in ["eng", "spa", "glg"]:
+            logger.info(f"found subtitle {lang=} stream in target")
+            subtitle_stream.language = lang
+            subtitle_streams.append(subtitle_stream)
 
-    if video_stream is None:
-        raise ValueError("no video stream found in target file")
-    return video_stream, audio_streams, subtitle_streams
+    return audio_streams, subtitle_streams
 
 
-def _retrieve_data_streams(data_path: Path) -> tuple[list[AudioStream], list[SubtitleStream]]:
+def _retrieve_data_streams(data: FileStreams) -> tuple[list[AudioStream], list[SubtitleStream]]:
     audio_streams: list[AudioStream] = []
     subtitle_streams: list[SubtitleStream] = []
 
-    for file in data_path.iterdir():
-        if not file.is_file():
-            logger.warning(f"skipping non-file {file} in dissected data file (should not happen)")
-            continue
+    for audio_stream in data.audios:
+        lang = find_audio_language(audio_stream, force_detection=True)
+        if lang in ["spa", "glg"]:
+            logger.info(f"found audio {lang=} stream in data")
+            audio_stream.language = lang
+            audio_streams.append(audio_stream)
 
-        # TODO: CAP S02E03 not finding spanish audio track
-        ext = infer_media_type(file)
-        if ext == "audio":
-            audio_stream = AudioStream.from_file(file)[0]
-            lang = find_audio_language(audio_stream, force_detection=True)
-            if lang in ["spa", "glg"]:
-                logger.info(f"found audio {lang=} stream in data")
-                audio_stream.language = lang
-                audio_streams.append(audio_stream)
-            continue
-        elif ext == "subtitle":
-            subtitle_stream = SubtitleStream.from_file(file)[0]
-            lang = find_subs_language(subtitle_stream, force_detection=True)
-            if lang in ["spa", "glg"]:
-                logger.info(f"found subtitle {lang=} stream in data")
-                subtitle_stream.language = lang
-                subtitle_streams.append(subtitle_stream)
-            continue
-        else:
-            logger.warning(f"skipping {ext} stream in {file}")
-            continue
+    for subtitle_stream in data.subtitles:
+        lang = find_subs_language(subtitle_stream, force_detection=True)
+        if lang in ["spa", "glg"]:
+            logger.info(f"found subtitle {lang=} stream in data")
+            subtitle_stream.language = lang
+            subtitle_streams.append(subtitle_stream)
 
     if len([s for s in audio_streams if s.language == "spa"]) > 1:
         scored_streams = [(s, s.score) for s in audio_streams if s.language == "spa"]
@@ -167,8 +142,8 @@ def _retrieve_data_streams(data_path: Path) -> tuple[list[AudioStream], list[Sub
 
 
 # TODO: improve language detection for forced subtitles
-def _retrieve_forced_subs(data_path: Path, duration: float) -> SubtitleStream | None:
-    subtitles = [SubtitleStream.from_file(f)[0] for f in data_path.iterdir() if is_subs(f)]
+def _retrieve_forced_subs(data: FileStreams, duration: float) -> SubtitleStream | None:
+    subtitles = data.subtitles
     counts = [(count_srt_entries(s.file_path.read_text(encoding="utf-8", errors="ignore")), s) for s in subtitles]
     if len(counts) == 0:
         return None

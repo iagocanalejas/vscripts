@@ -7,19 +7,19 @@ from typing import Any
 from pyutils.paths import create_temp_dir
 from vscripts.commands import COMMANDS, merge
 from vscripts.constants import (
-    COMMAND_APPEND,
     COMMAND_ATEMPO,
     COMMAND_ATEMPO_VIDEO,
     COMMAND_ATEMPO_WITH,
     COMMAND_DELAY,
     COMMAND_EXTRACT,
+    COMMAND_GENERATE_SUBS,
     COMMAND_HASTEN,
     COMMAND_INSPECT,
     COMMAND_TRANSLATE,
     NTSC_RATE,
 )
 from vscripts.data.matcher import NameMatcher
-from vscripts.data.models import ProcessingData
+from vscripts.data.streams import FileStreams
 
 logger = logging.getLogger("vscripts")
 
@@ -32,42 +32,43 @@ def cmd_do(input_path: Path, actions: list[str], output: Path | None, **kwargs) 
         raise ValueError(f"When input path is a directory, output path must also be a directory. Got {output=}")
 
     def inner_do(path: Path, output: Path | None) -> int:
+        streams = FileStreams.from_file(path)
         if COMMAND_INSPECT in parsed_actions:
             if len(parsed_actions) > 1:
                 logger.warning("The 'inspect' command should be used alone. Other commands will be ignored.")
-            COMMANDS[COMMAND_INSPECT](path, output=output, force_detection=kwargs.get("force_detection", False))
+            COMMANDS[COMMAND_INSPECT](streams, output=output, force_detection=kwargs.get("force_detection", False))
             return 0
 
-        track = 0
-        if COMMAND_EXTRACT in parsed_actions:
-            track_args = parsed_actions[COMMAND_EXTRACT]
-            track = track_args[0] if track_args else 0
-        data = ProcessingData.from_path(path, audio_track=track)
-
-        last_path = path
+        last_streams = streams
         with create_temp_dir() as temp_dir:
-            logger.info(f"using temporary directory {temp_dir}")
+            logger.info(f"processing {last_streams.file_path} using temporary directory {temp_dir}")
             for command, args in parsed_actions.items():
-                logger.info(f"running command '{command}' in file {last_path} with args '{args}'")
+                logger.info(f"running command '{command}' with {args=} and {kwargs=}")
 
                 fn = COMMANDS[command]
-                if command == COMMAND_APPEND and args is None:
-                    last_path = fn(attachment=last_path, root=path, output=Path(temp_dir), extra=data)
-                elif command == COMMAND_TRANSLATE:
-                    last_path = fn(
-                        last_path,
+                if command == COMMAND_TRANSLATE:
+                    last_streams = fn(
+                        last_streams,
                         *args if args is not None else [],
-                        output=Path(temp_dir),
                         mode=kwargs.get("translation_mode", "local"),
+                        output=Path(temp_dir),
+                        **kwargs,
                     )
+                elif command == COMMAND_EXTRACT and args is not None:
+                    last_streams = fn(last_streams, track=args[0], output=Path(temp_dir), **kwargs)
                 elif args is not None:
-                    last_path = fn(last_path, *args, output=Path(temp_dir), extra=data)
+                    last_streams = fn(last_streams, *args, output=Path(temp_dir), **kwargs)
                 else:
-                    last_path = fn(last_path, output=Path(temp_dir), extra=data)
+                    last_streams = fn(last_streams, output=Path(temp_dir), **kwargs)
+
+                # after this commands a new subtitle track is added that should be used for further commands
+                if command in {COMMAND_GENERATE_SUBS, COMMAND_TRANSLATE}:
+                    kwargs["track"] = len(last_streams.subtitles) - 1
+                    logger.info(f"track set to {kwargs['track']} for further commands")
 
             if output is None:
-                output = path.parent / last_path.name
-            shutil.move(last_path, output)
+                output = path.parent / last_streams.file_path.name
+            shutil.move(last_streams.file_path, output)
         return 0
 
     if input_path.is_dir():  # pragma: no cover
@@ -115,7 +116,11 @@ def cmd_merge(target_path: Path, data_path: Path, output: Path | None, **kwargs)
         if not data_file.is_file():
             raise ValueError(f"No matching data file found for target {target} in {data_path}")
 
-        merge(target, data_file, output=output if output else target.parent / target_matcher.clean())
+        merge(
+            target=FileStreams.from_file(target),
+            data=FileStreams.from_file(data_file),
+            output=output if output else target.parent / target_matcher.clean(),
+        )
         return 0
 
     if target_path.is_dir():  # pragma: no cover

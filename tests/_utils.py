@@ -1,6 +1,8 @@
 from pathlib import Path
+from typing import Literal
 
 from vscripts.utils import run_ffmpeg_command
+from vscripts.utils._utils import run_ffprobe_command
 
 
 def generate_test_subs(path: Path) -> Path:
@@ -85,3 +87,40 @@ def generate_test_full(
     ]
     run_ffmpeg_command(command)
     return output
+
+
+def get_file_duration(path: Path) -> float:
+    command = [
+        "-show_entries",
+        "format=duration",
+        "-of",
+        "default=noprint_wrappers=1:nokey=1",
+    ]
+    return float(run_ffprobe_command(path, command))
+
+
+def has_video(path: Path) -> bool:
+    return has_stream(path, "video")
+
+
+def has_audio(path: Path) -> bool:
+    return has_stream(path, "audio")
+
+
+def has_subtitles(path: Path) -> bool:
+    return has_stream(path, "subtitle")
+
+
+def has_stream(path: Path, stream_type: Literal["audio", "subtitle", "video"]) -> bool:
+    stream_map = {"audio": "a", "subtitle": "s", "video": "v"}
+    if stream_type not in stream_map:
+        raise ValueError(f"Invalid stream type: {stream_type}")
+    command = [
+        "-select_streams",
+        stream_map[stream_type],
+        "-show_entries",
+        "stream=index",
+        "-of",
+        "csv=p=0",
+    ]
+    return bool(run_ffprobe_command(path, command))
