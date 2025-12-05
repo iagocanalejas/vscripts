@@ -36,7 +36,7 @@ def test_simple_append(tmp_path):
 
     assert root.exists() and attachment.exists()
 
-    result = append(attachment, root, output)
+    result = append(attachment, root, output=output)
 
     assert result == output
     assert output.exists()

@@ -6,11 +6,10 @@ from typing import Literal
 from googletrans import Translator
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 
-from vscripts.constants import INVISIBLE_SEPARATOR, UNKNOWN_LANGUAGE
-from vscripts.data.language import ISO639_3_TO_1, find_language
-from vscripts.data.models import ProcessingData
-from vscripts.data.streams import CODEC_TYPE_SUBTITLE, SubtitleStream
-from vscripts.utils import get_output_file_path, get_streams, parse_srt, rebuild_srt
+from vscripts.constants import INVISIBLE_SEPARATOR, ISO639_3_TO_1, UNKNOWN_LANGUAGE
+from vscripts.data.language import find_subs_language
+from vscripts.utils import get_output_file_path, parse_srt, rebuild_srt
+from vscripts.utils._utils import is_subs
 
 logger = logging.getLogger("vscripts")
 
@@ -18,30 +17,29 @@ logger = logging.getLogger("vscripts")
 def translate_subtitles(
     input_path: Path,
     language: str,
-    output: Path | None = None,
     from_language: str | None = None,
-    extra: ProcessingData | None = None,
+    *,
+    output: Path | None = None,
     mode: Literal["local", "google"] = "local",
+    **_,
 ) -> Path:
     """
     Translate subtitle file to specified language using Helsinki-NLP translation models.
     Args:
         input_path (Path): The path to the input subtitle file.
         language (str): The target language code for translation.
-        output (Path | None): The path to save the output translated subtitle file.
         from_language (str | None): The source language code of the input subtitles.
-        extra (ProcessingData | None): Additional processing data.
+        output (Path | None): The path to save the output translated subtitle file.
+        mode (Literal["local", "google"]): Mode to use ("local" for Helsinki-NLP, "google" for Google Translate).
     Returns: The path to the newly created translated subtitle file.
     """
     if not input_path.is_file():
         raise ValueError(f"invalid {input_path=}")
-    streams = get_streams(input_path)
-    if len(streams) != 1 or streams[0].get("codec_type") != CODEC_TYPE_SUBTITLE:
-        raise ValueError(f"{input_path} must contain exactly one audio stream")
+    if not is_subs(input_path):
+        raise ValueError(f"{input_path} is not a subtitle file")
 
     if from_language is None:
-        stream = SubtitleStream.from_file(input_path)[0]
-        from_language = find_language(stream)
+        from_language = find_subs_language(input_path)
         logger.info(f"inferred language='{from_language}' for {input_path.name} from audio stream")
 
     if from_language == UNKNOWN_LANGUAGE:

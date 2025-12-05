@@ -1,27 +1,16 @@
 import logging
+from pathlib import Path
 from typing import Any, Literal, cast
 
 import whisper
 from fast_langdetect import detect
 
-from vscripts.constants import UNKNOWN_LANGUAGE
+from vscripts.constants import ISO639_1_TO_3, UNKNOWN_LANGUAGE
 from vscripts.data.streams import AudioStream, SubtitleStream
 from vscripts.utils import WhisperModel, flatten_srt_text, load_whisper
+from vscripts.utils._utils import is_subs
 
 logger = logging.getLogger("vscripts")
-
-
-ISO639_1_TO_3 = {
-    "en": "eng",
-    "fr": "fra",
-    "de": "deu",
-    "es": "spa",
-    "gl": "glg",
-    "it": "ita",
-    "zh": "zho",
-    "ja": "jpn",
-}
-ISO639_3_TO_1 = {v: k for k, v in ISO639_1_TO_3.items()}
 
 
 def find_language(stream: AudioStream | SubtitleStream, force_detection: bool = False) -> str:
@@ -48,7 +37,7 @@ _MODEL_MAP: dict[WhisperModel, Literal["lite", "full", "auto"]] = {
 
 
 def find_subs_language(
-    stream: SubtitleStream,
+    stream: SubtitleStream | Path,
     model_name: WhisperModel = "medium",
     force_detection: bool = False,
     only_metadata: bool = False,
@@ -56,28 +45,29 @@ def find_subs_language(
     """
     Detect the language of a subtitle stream using its content.
     Args:
-        stream (SubtitleStream): The subtitle stream to analyze.
+        stream (SubtitleStream | Path): The subtitle stream to analyze.
         model_name (FastLangDetectModel): The language detection model to use.
         force_detection (bool): Whether to force detection even if metadata exists.
         only_metadata (bool): If True, only use existing metadata without detection.
     Returns:
         str: The detected language code in ISO 639-3 format, or "unk" if undetermined.
     """
-    lang = None
-    if not force_detection:
-        lang = stream.tags.get("language", None)
-        if lang and _valid_lang(lang):
-            lang = _convert_lang_code(lang)
-            logger.info(f"using existing subtitle language metadata: {lang}")
-            return lang
+    if isinstance(stream, Path) and (not stream.is_file() or not is_subs(stream)):
+        raise ValueError(f"invalid {stream=}")
+
+    if not force_detection and isinstance(stream, SubtitleStream) and stream.language != UNKNOWN_LANGUAGE:
+        logger.info(f"using existing audio language metadata: {stream.language}")
+        return stream.language
 
     if only_metadata:
         logger.info(f"{only_metadata=}, skipping audio language detection")
         return UNKNOWN_LANGUAGE
 
-    with stream.file_path.open("r", encoding="utf-8", errors="ignore") as f:
+    file_path = stream.file_path if isinstance(stream, SubtitleStream) else stream
+    with file_path.open("r", encoding="utf-8", errors="ignore") as f:
         content = f.read()
 
+    lang = None
     t = detect(flatten_srt_text(content), model=_MODEL_MAP[model_name], k=3)
     if len(t) > 0:
         lang = str(t[0]["lang"])
@@ -102,13 +92,9 @@ def find_audio_language(
     Returns:
         str: The detected language code in ISO 639-3 format, or "unk"
     """
-    lang = None
-    if not force_detection:
-        lang = stream.tags.get("language", None)
-        if lang and _valid_lang(lang):
-            lang = _convert_lang_code(lang)
-            logger.info(f"using existing audio language metadata: {lang}")
-            return lang
+    if not force_detection and stream.language != UNKNOWN_LANGUAGE:
+        logger.info(f"using existing audio language metadata: {stream.language}")
+        return stream.language
 
     model = load_whisper(model_name)
     audio = whisper.load_audio(str(stream.file_path))
@@ -130,7 +116,3 @@ def _convert_lang_code(lang: str) -> str:
         return ISO639_1_TO_3.get(lang, UNKNOWN_LANGUAGE)
     logger.warning(f"unknown ISO 639-1 code: {lang}")
     return lang
-
-
-def _valid_lang(lang: str) -> bool:
-    return lang not in ("und", "unk", "")

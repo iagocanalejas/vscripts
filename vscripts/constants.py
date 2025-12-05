@@ -25,8 +25,8 @@ COMMAND_APPEND_SUBS = "subs"
 COMMAND_GENERATE_SUBS = "generate-subs"
 COMMAND_TRANSLATE = "translate"
 
-ENCODING_1080P = "1080p"
-ENCODING_2160P = "2160p"
+ENCODING_1080P: Literal["1080p"] = "1080p"
+ENCODING_2160P: Literal["2160p"] = "2160p"
 EncodingPreset = Literal["1080p", "2160p"]
 ENCODING_PRESETS = {
     ENCODING_1080P: "H.265 NVENC 1080p",
@@ -39,3 +39,15 @@ HDR_COLOR_TRANSFERS = [
     "bt2020-10",
     "bt2020-12",
 ]
+
+ISO639_1_TO_3 = {
+    "en": "eng",
+    "fr": "fra",
+    "de": "deu",
+    "es": "spa",
+    "gl": "glg",
+    "it": "ita",
+    "zh": "zho",
+    "ja": "jpn",
+}
+ISO639_3_TO_1 = {v: k for k, v in ISO639_1_TO_3.items()}

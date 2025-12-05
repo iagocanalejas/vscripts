@@ -5,6 +5,8 @@
 pip install .
 ```
 
+## DO command
+
 ### Basic Usage
 
 ```sh
@@ -56,6 +58,14 @@ translate=TARGET_LANG
 ```sh
 --force-detection
 --translation-mode=MODE_NAME  # 'local' (default), 'google'
+```
+
+## MERGE Command
+
+### Basic Usage
+
+```sh
+vscripts merge PATH1 PATH2 OUTPUT_PATH
 ```
 
 # Subtitles

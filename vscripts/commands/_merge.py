@@ -11,7 +11,7 @@ from vscripts.utils import count_srt_entries, get_output_file_path, infer_media_
 logger = logging.getLogger("vscripts")
 
 
-def merge(target: Path, data: Path, output: Path | None) -> Path:
+def merge(target: Path, data: Path, *, output: Path | None, **_) -> Path:
     """
     Merges audio and subtitle streams from `data` into the `target` video file.
     Args:
@@ -190,3 +190,4 @@ def _retrieve_forced_subs(data_path: Path, duration: float) -> SubtitleStream | 
         subs.default = True
         subs.language = "spa"
         return subs
+    return None

@@ -58,7 +58,6 @@ def cmd_do(input_path: Path, actions: list[str], output: Path | None, **kwargs) 
                         last_path,
                         *args if args is not None else [],
                         output=Path(temp_dir),
-                        extra=data,
                         mode=kwargs.get("translation_mode", "local"),
                     )
                 elif args is not None:

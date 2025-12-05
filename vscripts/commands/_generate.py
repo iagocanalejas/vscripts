@@ -2,8 +2,8 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from vscripts.constants import UNKNOWN_LANGUAGE
-from vscripts.data.language import ISO639_3_TO_1, find_language
+from vscripts.constants import ISO639_3_TO_1, UNKNOWN_LANGUAGE
+from vscripts.data.language import find_language
 from vscripts.data.models import ProcessingData
 from vscripts.data.streams import CODEC_TYPE_AUDIO, AudioStream
 from vscripts.utils import get_output_file_path, get_streams, load_whisper, to_srt_timestamp
@@ -13,16 +13,18 @@ logger = logging.getLogger("vscripts")
 
 def generate_subtitles(
     input_path: Path,
-    output: Path | None = None,
     language: str | None = None,
+    *,
+    output: Path | None = None,
     extra: ProcessingData | None = None,
+    **_,
 ) -> Path:
     """
     Generate subtitle file with specified language metadata using FFmpeg.
     Args:
         input_path (Path): The path to the input audio file.
-        output (Path | None): The path to save the output subtitle file.
         language (str): The language code to set for the subtitle stream.
+        output (Path | None): The path to save the output subtitle file.
         extra (ProcessingData | None): Additional processing data.
     Returns: The path to the newly created subtitle file with updated language metadata.
     """

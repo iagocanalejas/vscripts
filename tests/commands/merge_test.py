@@ -195,14 +195,8 @@ def test__retrieve_data_streams(tmp_path):
     subs_stream.tags["language"] = "es"
 
     with (
-        patch(
-            "vscripts.commands._merge.find_audio_language",
-            return_value="spa",
-        ),
-        patch(
-            "vscripts.commands._merge.find_subs_language",
-            return_value="spa",
-        ),
+        patch("vscripts.commands._merge.find_audio_language", return_value="spa"),
+        patch("vscripts.commands._merge.find_subs_language", return_value="spa"),
     ):
         a_streams, s_streams = _retrieve_data_streams(tmp_path)
 

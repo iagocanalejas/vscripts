@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Literal
 
-from vscripts.constants import HDR_COLOR_TRANSFERS
+from vscripts.constants import HDR_COLOR_TRANSFERS, ISO639_1_TO_3, UNKNOWN_LANGUAGE
 from vscripts.utils import run_ffprobe_command
 
 logger = logging.getLogger("vscripts")
@@ -16,22 +16,24 @@ CODEC_TYPE_SUBTITLE = "subtitle"
 
 CodecType = Literal["video", "audio", "subtitle"]
 
-# TODO: rewrite this as when we extract a video we can retrieve all the streams at once
+
+@dataclass
+class Stream:
+    index: int
+    codec_name: str
+    codec_type: CodecType
+    file_path: Path = field(init=False)
+    tags: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
-class VideoStream:
-    index: int
-    file_path: Path = field(init=False)
-    duration: str | None = None
-    r_frame_rate: float | None = None
-    codec_name: str | None = None
-    codec_type: CodecType | None = None
+class VideoStream(Stream):
+    duration: float | None = None
     format_names: list[str] | None = None
+    r_frame_rate: float | None = None
     color_space: str = "bt709"
     color_transfer: str = "bt709"
     color_primaries: str = "bt709"
-    tags: dict[str, str] = field(default_factory=dict)
 
     @property
     def is_hdr(self) -> bool:
@@ -46,10 +48,10 @@ class VideoStream:
 
         return VideoStream(
             index=data.get("index", -1),
-            duration=duration,
+            duration=float(duration) if duration is not None else None,
             r_frame_rate=_parse_frame_rate(data.get("r_frame_rate")),
-            codec_name=data.get("codec_name"),
-            codec_type=data.get("codec_type"),
+            codec_name=data["codec_name"],
+            codec_type=data["codec_type"],
             color_space=data.get("color_space", "bt709"),
             color_transfer=data.get("color_transfer", "bt709"),
             color_primaries=data.get("color_primaries", "bt709"),
@@ -60,6 +62,8 @@ class VideoStream:
     def from_file(cls, file_path: Path) -> "VideoStream | None":
         video_data = _ffprobe_streams(file_path, "v")
         streams = [cls.from_dict(data) for data in video_data.get("streams", [])]
+        if len(streams) > 1:
+            logger.warning(f"multiple video streams found in {file_path}, using the first one")
         if len(streams) == 0:
             return None
         stream = streams[0]
@@ -69,19 +73,13 @@ class VideoStream:
 
 
 @dataclass
-class AudioStream:
-    index: int
-    bit_rate: int
-    sample_rate: int
-    channels: int
-    sample_fmt: str | None
-    language: str | None = None
-    file_path: Path = field(init=False)
-    duration: str | None = None
-    codec_name: str | None = None
-    codec_type: CodecType | None = None
-    format_names: list[str] | None = None
-    tags: dict[str, str] = field(default_factory=dict)
+class AudioStream(Stream):
+    language: str = UNKNOWN_LANGUAGE
+    duration: float | None = None
+    bit_rate: int = 0
+    sample_rate: int = 0
+    channels: int = 0
+    sample_fmt: str | None = None
 
     @property
     def score(self) -> int:
@@ -112,11 +110,19 @@ class AudioStream:
             duration_time = data["tags"]["DURATION"]
             duration = _parse_duration(duration_time)
 
+        lang = data.get("tags", {}).get("language", UNKNOWN_LANGUAGE)
+        if len(lang) < 3:
+            logger.debug(f"found audio language tag: {lang}")
+            ISO639_1_TO_3.get(lang, UNKNOWN_LANGUAGE)
+        if lang in {"und", "unknown", "none", ""}:
+            lang = UNKNOWN_LANGUAGE
+
         return AudioStream(
             index=data.get("index", -1),
-            codec_name=data.get("codec_name"),
-            codec_type=data.get("codec_type"),
-            duration=duration,
+            language=lang,
+            duration=float(duration) if duration is not None else None,
+            codec_name=data["codec_name"],
+            codec_type=data["codec_type"],
             bit_rate=int(data.get("bit_rate", 0) or 0),
             sample_rate=int(data.get("sample_rate", 0) or 0),
             channels=int(data.get("channels", 0) or 0),
@@ -130,7 +136,6 @@ class AudioStream:
         streams = [cls.from_dict(data) for data in audio_data.get("streams", [])]
         for stream in streams:
             stream.file_path = file_path
-            stream.format_names = audio_data.get("format", {}).get("format_name", "").split(",")
         return streams
 
     @classmethod
@@ -141,22 +146,23 @@ class AudioStream:
 
 
 @dataclass
-class SubtitleStream:
-    index: int
-    language: str | None = None
-    file_path: Path = field(init=False)
-    codec_name: str | None = None
-    codec_type: CodecType | None = None
-    format_names: list[str] | None = None
-    tags: dict[str, str] = field(default_factory=dict)
+class SubtitleStream(Stream):
+    language: str = UNKNOWN_LANGUAGE
     default: bool = False
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "SubtitleStream":
+        lang = data.get("tags", {}).get("language", UNKNOWN_LANGUAGE)
+        if len(lang) < 3:
+            logger.debug(f"found audio language tag: {lang}")
+            ISO639_1_TO_3.get(lang, UNKNOWN_LANGUAGE)
+        if lang in {"und", "unknown", "none", ""}:
+            lang = UNKNOWN_LANGUAGE
         return SubtitleStream(
             index=data.get("index", -1),
-            codec_name=data.get("codec_name"),
-            codec_type=data.get("codec_type"),
+            language=lang,
+            codec_name=data["codec_name"],
+            codec_type=data["codec_type"],
             tags=data.get("tags", {}),
         )
 
@@ -166,7 +172,6 @@ class SubtitleStream:
         streams = [cls.from_dict(data) for data in subtitle_data.get("streams", [])]
         for stream in streams:
             stream.file_path = file_path
-            stream.format_names = subtitle_data.get("format", {}).get("format_name", "").split(",")
         return streams
 
     @classmethod
@@ -176,21 +181,19 @@ class SubtitleStream:
         return stream
 
 
-def _parse_duration(duration: str | None) -> str | None:
+def _parse_duration(duration: str | None) -> float | None:
     if duration is None:
         return None
     if "," in duration:
         time_obj = datetime.strptime(duration[:15], "%H:%M:%S,%f")
     else:
         time_obj = datetime.strptime(duration[:15], "%H:%M:%S.%f")
-    return f"{
-        timedelta(
-            hours=time_obj.hour,
-            minutes=time_obj.minute,
-            seconds=time_obj.second,
-            microseconds=time_obj.microsecond,
-        ).total_seconds()
-    }"
+    return timedelta(
+        hours=time_obj.hour,
+        minutes=time_obj.minute,
+        seconds=time_obj.second,
+        microseconds=time_obj.microsecond,
+    ).total_seconds()
 
 
 def _parse_frame_rate(frame_rate: str | None) -> float | None:

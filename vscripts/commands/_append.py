@@ -12,8 +12,10 @@ logger = logging.getLogger("vscripts")
 def append(
     attachment: Path,
     root: Path,
+    *,
     output: Path | None = None,
     extra: ProcessingData | None = None,
+    **_,
 ) -> Path:
     """
     Append the contents of one multimedia file into another using FFmpeg and save the result as a new file.
@@ -74,7 +76,14 @@ def append(
     return output
 
 
-def append_subs(attachment: Path, root: Path, language: str | None = None, output: Path | None = None) -> Path:
+def append_subs(
+    attachment: Path,
+    root: Path,
+    language: str | None = None,
+    *,
+    output: Path | None = None,
+    **_,
+) -> Path:
     """
     Append subtitles to a video file using FFmpeg and save it as a new file.
     Args:

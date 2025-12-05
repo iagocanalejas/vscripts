@@ -14,6 +14,7 @@ def extract(
     input_path: Path,
     track: int = 0,
     stream_type: Literal["audio", "subtitle"] = "audio",
+    *,
     output: Path | None = None,
     **_,
 ) -> Path:
@@ -72,7 +73,7 @@ def extract(
     return output
 
 
-def dissect(input_path: Path, output: Path | None = None, **_) -> Path:
+def dissect(input_path: Path, *, output: Path | None = None, **_) -> Path:
     """
     Dissect a multimedia file into its individual streams using FFmpeg and save them as separate files.
     Args:
@@ -109,34 +110,34 @@ def dissect(input_path: Path, output: Path | None = None, **_) -> Path:
         run_ffmpeg_command(command)
 
     logger.info(f"extracting {len(audio_streams)} audio streams")
-    for stream in audio_streams:
-        logger.info(f"\t- audio stream {stream.index} ({stream.codec_name})")
+    for a_stream in audio_streams:
+        logger.info(f"\t- audio stream {a_stream.index} ({a_stream.codec_name})")
         command = [
             "-i",
             str(input_path),
             "-map",
-            f"0:a:{stream.index - 1}",
+            f"0:a:{a_stream.index - 1}",
             "-map_metadata",
             "0",
             "-c",
             "copy",
-            str(output / f"stream_{stream.index:03d}.{suffix_by_codec(stream.codec_name, 'audio')}"),
+            str(output / f"stream_{a_stream.index:03d}.{suffix_by_codec(a_stream.codec_name, 'audio')}"),
         ]
         run_ffmpeg_command(command)
 
     logger.info(f"extracting {len(subtitle_streams)} subtitle streams")
-    for stream in subtitle_streams:
-        logger.info(f"\t- subtitle stream {stream.index} ({stream.codec_name})")
+    for s_stream in subtitle_streams:
+        logger.info(f"\t- subtitle stream {s_stream.index} ({s_stream.codec_name})")
         command = [
             "-i",
             str(input_path),
             "-map",
-            f"0:s:{stream.index - len(audio_streams) - 1}",
+            f"0:s:{s_stream.index - len(audio_streams) - 1}",
             "-map_metadata",
             "0",
         ]
-        command += ffmpeg_copy_by_codec(stream.codec_name)
-        command.append(str(output / f"stream_{stream.index:03d}.{suffix_by_codec(stream.codec_name, 'subtitle')}"))
+        command += ffmpeg_copy_by_codec(s_stream.codec_name)
+        command.append(str(output / f"stream_{s_stream.index:03d}.{suffix_by_codec(s_stream.codec_name, 'subtitle')}"))
         run_ffmpeg_command(command)
 
     return output

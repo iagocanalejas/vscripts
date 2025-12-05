@@ -44,7 +44,11 @@ def test_atempo_infering_from_rate(tmp_path):
         patch("vscripts.commands._atempo.has_video", return_value=True),
         patch(
             "vscripts.data.streams._ffprobe_streams",
-            return_value={"streams": [{"r_frame_rate": "25/1", "codec_type": "video", "tags": {"language": "eng"}}]},
+            return_value={
+                "streams": [
+                    {"r_frame_rate": "25/1", "codec_type": "video", "codec_name": "hevc", "tags": {"language": "eng"}}
+                ]
+            },
         ),
     ):
         output_file = atempo(input_file, from_rate=None, to_rate=30.0, output=output)

@@ -1,6 +1,5 @@
 import subprocess
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 from vscripts.commands._shift import delay, hasten, inspect, reencode
@@ -8,7 +7,7 @@ from vscripts.constants import ENCODING_1080P
 from vscripts.data.streams import _ffprobe_streams
 from vscripts.utils import get_file_duration, has_audio, has_subtitles
 
-from tests._utils import generate_test_audio, generate_test_full, generate_test_video, test_whisper_model
+from tests._utils import generate_test_audio, generate_test_full, generate_test_video
 
 
 def test_shift_io():
@@ -31,7 +30,7 @@ def test_simple_delay(tmp_path):
 
     assert input_file.exists() and input_file.stat().st_size > 0
 
-    result = delay(input_file, 0.25, output_file)
+    result = delay(input_file, 0.25, output=output_file)
 
     assert result == output_file
     assert output_file.exists()
@@ -48,7 +47,7 @@ def test_simple_hasten(tmp_path):
 
     assert input_file.exists() and input_file.stat().st_size > 0
 
-    result = hasten(input_file, 0.25, output_file)
+    result = hasten(input_file, 0.25, output=output_file)
 
     assert result == output_file
     assert output_file.exists()
@@ -62,8 +61,7 @@ def test_inspect_adds_language_metadata(tmp_path):
     assert has_audio(video_path)
     assert has_subtitles(video_path)
 
-    with patch("vscripts.data.language.load_whisper", return_value=test_whisper_model):
-        inspected_path = inspect(video_path, force_detection=True)
+    inspected_path = inspect(video_path, force_detection=True)
 
     assert inspected_path.exists(), "Output file should exist"
     assert inspected_path != video_path, "Output file should be a new file"
@@ -107,7 +105,7 @@ def test_reencode(monkeypatch, tmp_path):
     input_file = generate_test_full(tmp_path, duration=2)
     output_file = tmp_path / "reencoded.mkv"
 
-    result = reencode(input_file, ENCODING_1080P, output_file)
+    result = reencode(input_file, ENCODING_1080P, output=output_file)
 
     assert result == output_file
     assert output_file.exists()

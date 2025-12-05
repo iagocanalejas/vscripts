@@ -5,7 +5,7 @@ import pytest
 from vscripts.commands._extract import dissect, extract
 from vscripts.utils import has_audio, has_subtitles
 
-from tests._utils import generate_test_full, test_whisper_model
+from tests._utils import generate_test_full
 
 
 def test_extract_io():
@@ -22,7 +22,7 @@ def test_extract_audio_and_subs(tmp_path):
     assert has_audio(video_path)
     assert has_subtitles(video_path)
 
-    with patch("vscripts.data.language.load_whisper", return_value=test_whisper_model):
+    with patch("vscripts.commands._extract.find_language", return_value="spa"):
         audio_out = extract(video_path, track=0, stream_type="audio")
         subs_out = extract(video_path, track=0, stream_type="subtitle")
 

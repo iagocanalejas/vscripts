@@ -5,7 +5,6 @@ from pathlib import Path
 from pyutils.paths import create_temp_dir
 from vscripts.constants import ENCODING_1080P, ENCODING_PRESETS, UNKNOWN_LANGUAGE, EncodingPreset
 from vscripts.data.language import find_audio_language, find_subs_language
-from vscripts.data.models import ProcessingData
 from vscripts.data.streams import AudioStream, SubtitleStream
 from vscripts.utils import get_output_file_path, is_hdr, run_ffmpeg_command, run_handbrake_command
 
@@ -17,8 +16,9 @@ logger = logging.getLogger("vscripts")
 def delay(
     input_path: Path,
     delay: float,
+    *,
     output: Path | None = None,
-    extra: ProcessingData | None = None,
+    **_,
 ) -> Path:
     """
     Apply an audio delay effect to a multimedia file using FFmpeg and save it as a new file.
@@ -26,17 +26,14 @@ def delay(
         input_path (Path): The path to the audio or video file to be processed.
         delay(float): The delay time in seconds.
         output (Path | None): The path to save the output file.
-        extra (ProcessingData | None): Additional processing data that may contain audio stream information.
     Returns: The path to the newly created file with the audio delay effect applied.
     """
     if not input_path.is_file():
         raise ValueError(f"invalid {input_path=}")
 
-    stream = AudioStream.from_file(input_path)[extra.audio_track if extra else 0]
-    suffix = f".{stream.format_names[0]}" if stream.format_names else input_path.suffix
     output = get_output_file_path(
         output or input_path.parent,
-        default_name=f"{input_path.stem}_delayed_{delay}{suffix}",
+        default_name=f"{input_path.stem}_delayed_{delay}{input_path.suffix}",
     )
 
     logger.info(f"applying audio {delay=}ms to {input_path.name}\n\toutputing to {output}")
@@ -56,9 +53,10 @@ def delay(
 
 def hasten(
     input_path: Path,
-    hasten_factor: float,
+    hasten: float,
+    *,
     output: Path | None = None,
-    extra: ProcessingData | None = None,
+    **_,
 ) -> Path:
     """
     Adjust the playback speed of a multimedia file using FFmpeg and save it as a new file.
@@ -66,25 +64,22 @@ def hasten(
         input_path (Path): The path to the input audio or video file to adjust.
         hasten_factor (float): The hasten factor to adjust playback speed.
         output (Path | None): The path to save the output file.
-        extra (ProcessingData | None): Additional processing data that may contain audio stream information.
     Returns: The path to the newly created hastened audio or video file.
     """
     if not input_path.is_file():
         raise ValueError(f"invalid {input_path=}")
 
-    stream = AudioStream.from_file(input_path)[extra.audio_track if extra else 0]
-    suffix = f".{stream.format_names[0]}" if stream.format_names else input_path.suffix
     output = get_output_file_path(
         output or input_path.parent,
-        default_name=f"{input_path.stem}_hastened_{hasten_factor}{suffix}",
+        default_name=f"{input_path.stem}_hastened_{hasten}{input_path.suffix}",
     )
 
-    logger.info(f"adjusting playback speed of {input_path.name} by hasten={hasten_factor}\n\toutputing to {output}")
+    logger.info(f"adjusting playback speed of {input_path.name} by {hasten=}\n\toutputing to {output}")
     command = [
         "-i",
         str(input_path),
         "-ss",
-        f"{hasten_factor}",
+        f"{hasten}",
         "-acodec",
         "copy",
         "-strict",
@@ -96,11 +91,12 @@ def hasten(
     return output
 
 
-def inspect(input_path: Path, output: Path | None = None, force_detection: bool = False) -> Path:
+def inspect(input_path: Path, *, force_detection: bool = False, output: Path | None = None, **_) -> Path:
     """
     Inspect a multimedia file to identify and add language metadata for audio and subtitle streams using FFmpeg.
     Args:
         input_path (Path): The path to the input multimedia file.
+        force_detection (bool): Whether to force language detection even if metadata exists.
         output (Path | None): The path to save the output file.
     Returns: The path to the newly created multimedia file with updated language metadata.
     """
@@ -117,8 +113,8 @@ def inspect(input_path: Path, output: Path | None = None, force_detection: bool 
 
     audio_streams = AudioStream.from_file(input_path)
     with create_temp_dir() as temp_dir:
-        for i, stream in enumerate(audio_streams):
-            logger.info(f"found audio stream: {stream}")
+        for i, a_stream in enumerate(audio_streams):
+            logger.info(f"found audio stream: {a_stream}")
             file = extract(input_path, track=i, stream_type="audio", output=Path(temp_dir))
             lang = find_audio_language(AudioStream.from_file(file)[0], force_detection=force_detection)
             if lang != UNKNOWN_LANGUAGE:
@@ -128,8 +124,8 @@ def inspect(input_path: Path, output: Path | None = None, force_detection: bool 
 
     subtitle_streams = SubtitleStream.from_file(input_path)
     with create_temp_dir() as temp_dir:
-        for i, stream in enumerate(subtitle_streams):
-            logger.info(f"found subtitle stream: {stream}")
+        for i, s_stream in enumerate(subtitle_streams):
+            logger.info(f"found subtitle stream: {s_stream}")
             file = extract(input_path, track=i, stream_type="subtitle", output=Path(temp_dir))
             lang = find_subs_language(SubtitleStream.from_file(file)[0], force_detection=force_detection)
             if lang != UNKNOWN_LANGUAGE:
@@ -161,8 +157,9 @@ def inspect(input_path: Path, output: Path | None = None, force_detection: bool 
 def reencode(
     input_path: Path,
     quality: EncodingPreset = ENCODING_1080P,
+    *,
     output: Path | None = None,
-    extra: ProcessingData | None = None,
+    **_,
 ) -> Path:
     """
     Re-encode a multimedia file using HandBrakeCLI with a specified quality preset and save it as a new file.
