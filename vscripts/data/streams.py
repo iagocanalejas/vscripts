@@ -1,11 +1,13 @@
 import json
 import logging
+from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Literal
 
-from vscripts.constants import HDR_COLOR_TRANSFERS, ISO639_1_TO_3, UNKNOWN_LANGUAGE
+from vscripts.constants import HDR_COLOR_TRANSFERS, UNKNOWN_LANGUAGE
+from vscripts.data.language import ISO639_1_TO_3
 from vscripts.utils import run_ffprobe_command
 
 logger = logging.getLogger("vscripts")
@@ -15,6 +17,70 @@ CODEC_TYPE_AUDIO = "audio"
 CODEC_TYPE_SUBTITLE = "subtitle"
 
 CodecType = Literal["video", "audio", "subtitle"]
+
+
+@dataclass
+class FileStreams:
+    video: "VideoStream | None"
+    audios: list["AudioStream"]
+    subtitles: list["SubtitleStream"]
+
+    @property
+    def file_path(self) -> Path:
+        if self.video is not None:
+            return self.video.file_path
+        if self.audios:
+            return self.audios[0].file_path
+        if self.subtitles:
+            return self.subtitles[0].file_path
+        raise ValueError("no streams available to determine file path")
+
+    @file_path.setter
+    def file_path(self, value: Path) -> None:
+        if self.video is not None:
+            self.video.file_path = value
+        for audio in self.audios:
+            audio.file_path = value
+        for subtitle in self.subtitles:
+            subtitle.file_path = value
+
+    @classmethod
+    def from_file(cls, file_path: Path) -> "FileStreams":
+        video: VideoStream | None = None
+        audios: list[AudioStream] = []
+        subtitles: list[SubtitleStream] = []
+
+        data = _ffprobe_streams(file_path)
+        for stream_data in data.get("streams", []):
+            if stream_data.get("codec_type") == CODEC_TYPE_VIDEO:
+                video = VideoStream.from_dict(stream_data)
+                video.file_path = file_path
+                video.format_names = data.get("format", {}).get("format_name", "").split(",")
+                video.file_path = file_path
+            elif stream_data.get("codec_type") == CODEC_TYPE_AUDIO:
+                audio = AudioStream.from_dict(stream_data)
+                audio.file_path = file_path
+                audios.append(audio)
+            elif stream_data.get("codec_type") == CODEC_TYPE_SUBTITLE:
+                subtitle = SubtitleStream.from_dict(stream_data)
+                subtitle.file_path = file_path
+                subtitles.append(subtitle)
+
+        return cls(
+            video=video,
+            audios=audios,
+            subtitles=subtitles,
+        )
+
+    def copy(self, with_new_path: Path | None = None) -> "FileStreams":
+        new_streams = FileStreams(
+            video=deepcopy(self.video) if self.video is not None else None,
+            audios=[deepcopy(audio) for audio in self.audios],
+            subtitles=[deepcopy(subtitle) for subtitle in self.subtitles],
+        )
+        if with_new_path is not None:
+            new_streams.file_path = with_new_path
+        return new_streams
 
 
 @dataclass
@@ -149,6 +215,7 @@ class AudioStream(Stream):
 class SubtitleStream(Stream):
     language: str = UNKNOWN_LANGUAGE
     default: bool = False
+    generated: bool = False
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "SubtitleStream":
@@ -158,6 +225,7 @@ class SubtitleStream(Stream):
             ISO639_1_TO_3.get(lang, UNKNOWN_LANGUAGE)
         if lang in {"und", "unknown", "none", ""}:
             lang = UNKNOWN_LANGUAGE
+
         return SubtitleStream(
             index=data.get("index", -1),
             language=lang,
@@ -208,10 +276,11 @@ def _parse_frame_rate(frame_rate: str | None) -> float | None:
         return None
 
 
-def _ffprobe_streams(file_path: Path, stream_type: Literal["v", "a", "s"]) -> dict[str, Any]:
-    command = [
-        "-select_streams",
-        stream_type,
+def _ffprobe_streams(file_path: Path, stream_type: Literal["v", "a", "s"] | None = None) -> dict[str, Any]:
+    command = []
+    if stream_type is not None:
+        command += ["-select_streams", stream_type]
+    command += [
         "-show_entries",
         "stream=index,duration,r_frame_rate,codec_name,codec_type,color_space,color_transfer,color_primaries,bit_rate,sample_rate,channels,sample_fmt",
         "-show_entries",

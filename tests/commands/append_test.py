@@ -2,10 +2,11 @@ import subprocess
 from pathlib import Path
 
 import pytest
-from vscripts.commands._append import append, append_subs
-from vscripts.utils import FFPROBE_BASE_COMMAND, has_subtitles
+from vscripts.commands._append import append
+from vscripts.data.streams import FileStreams
+from vscripts.utils import FFPROBE_BASE_COMMAND
 
-from tests._utils import generate_test_audio, generate_test_subs, generate_test_video
+from tests._utils import generate_test_audio, generate_test_full
 
 
 def test_append_io(tmp_path):
@@ -13,20 +14,19 @@ def test_append_io(tmp_path):
     generate_test_audio(existing_file)
 
     with pytest.raises(ValueError):
-        append(Path("non_existent_file.wav"), existing_file)
+        streams = FileStreams.from_file(generate_test_full(tmp_path, duration=1))
+        assert streams.video is not None, "Test file must have a video stream"
+        streams.video.file_path = Path("non_existent_file.wav")
+        append(streams)
 
     with pytest.raises(ValueError):
-        append(existing_file, Path("non_existent_file.wav"))
-
-    with pytest.raises(ValueError):
-        append_subs(Path("non_existent_file.srt"), existing_file)
-
-    with pytest.raises(ValueError):
-        append_subs(existing_file, Path("non_existent_file.wav"))
+        streams = FileStreams.from_file(generate_test_full(tmp_path, duration=1))
+        streams.audios[0].file_path = Path("non_existent_file.wav")
+        append(streams)
 
 
 @pytest.mark.integration
-def test_simple_append(tmp_path):
+def test_simple_audio_append(tmp_path):
     root = tmp_path / "root.wav"
     attachment = tmp_path / "attachment.wav"
     output = tmp_path / "combined.mkv"
@@ -35,10 +35,12 @@ def test_simple_append(tmp_path):
         generate_test_audio(path, freq)
 
     assert root.exists() and attachment.exists()
+    root = FileStreams.from_file(root)
+    root.audios.append(FileStreams.from_file(attachment).audios[0])
 
-    result = append(attachment, root, output=output)
+    result = append(root, output=output)
 
-    assert result == output
+    assert result.file_path == output
     assert output.exists()
 
     out = subprocess.check_output(
@@ -55,51 +57,3 @@ def test_simple_append(tmp_path):
     )
     audio_stream_lines = [line for line in out.decode().strip().splitlines() if line.strip()]
     assert len(audio_stream_lines) >= 2, f"expected >=2 audio streams, got {len(audio_stream_lines)}"
-
-
-@pytest.mark.integration
-def test_append_subs_explicit_lang(tmp_path):
-    video = tmp_path / "input.mp4"
-    subs = tmp_path / "test.srt"
-    output = tmp_path / "with_subs.mp4"
-    generate_test_video(video)
-    generate_test_subs(subs)
-
-    result = append_subs(subs, video, language="eng", output=output)
-
-    assert result.exists(), "Output file should exist"
-    assert result != video, "Output should be a new file"
-
-    assert has_subtitles(result), "Output file should contain subtitle streams"
-
-
-@pytest.mark.integration
-def test_append_subs_no_lang(tmp_path):
-    video = tmp_path / "input.mp4"
-    subs = tmp_path / "test.srt"
-    output = tmp_path / "with_subs.mp4"
-    generate_test_video(video)
-    generate_test_subs(subs)
-
-    result = append_subs(subs, video, language=None, output=output)
-
-    assert result.exists(), "Output file should exist"
-    assert result != video, "Output should be a new file"
-
-    assert has_subtitles(result), "Output file should contain subtitle streams"
-
-
-@pytest.mark.integration
-def test_append_subs_no_mp4(tmp_path):
-    video = tmp_path / "input.mkv"
-    subs = tmp_path / "test.srt"
-    output = tmp_path / "with_subs.mkv"
-    generate_test_video(video)
-    generate_test_subs(subs)
-
-    result = append_subs(subs, video, language="eng", output=output)
-
-    assert result.exists(), "Output file should exist"
-    assert result != video, "Output should be a new file"
-
-    assert has_subtitles(result), "Output file should contain subtitle streams"

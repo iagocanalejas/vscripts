@@ -9,6 +9,7 @@ from .matcher import (
 )
 
 from .streams import (
+    FileStreams as FileStreams,
     VideoStream as VideoStream,
     AudioStream as AudioStream,
     SubtitleStream as SubtitleStream,
