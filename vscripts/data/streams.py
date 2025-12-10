@@ -21,9 +21,9 @@ CodecType = Literal["video", "audio", "subtitle"]
 
 @dataclass
 class FileStreams:
-    video: "VideoStream | None"
-    audios: list["AudioStream"]
-    subtitles: list["SubtitleStream"]
+    video: "VideoStream | None" = None
+    audios: list["AudioStream"] = field(default_factory=list)
+    subtitles: list["SubtitleStream"] = field(default_factory=list)
 
     @property
     def file_path(self) -> Path:
@@ -73,14 +73,11 @@ class FileStreams:
         )
 
     def copy(self, with_new_path: Path | None = None) -> "FileStreams":
-        new_streams = FileStreams(
-            video=deepcopy(self.video) if self.video is not None else None,
-            audios=[deepcopy(audio) for audio in self.audios],
-            subtitles=[deepcopy(subtitle) for subtitle in self.subtitles],
+        return FileStreams(
+            video=self.video.copy(with_new_path=with_new_path) if self.video is not None else None,
+            audios=[audio.copy(with_new_path=with_new_path) for audio in self.audios],
+            subtitles=[subtitle.copy(with_new_path=with_new_path) for subtitle in self.subtitles],
         )
-        if with_new_path is not None:
-            new_streams.file_path = with_new_path
-        return new_streams
 
 
 @dataclass
@@ -136,6 +133,12 @@ class VideoStream(Stream):
         stream.file_path = file_path
         stream.format_names = video_data.get("format", {}).get("format_name", "").split(",")
         return stream
+
+    def copy(self, with_new_path: Path | None = None) -> "VideoStream":
+        new_stream = deepcopy(self)
+        if with_new_path is not None:
+            new_stream.file_path = with_new_path
+        return new_stream
 
 
 @dataclass
@@ -210,6 +213,12 @@ class AudioStream(Stream):
         stream.file_path = file_path
         return stream
 
+    def copy(self, with_new_path: Path | None = None) -> "AudioStream":
+        new_stream = deepcopy(self)
+        if with_new_path is not None:
+            new_stream.file_path = with_new_path
+        return new_stream
+
 
 @dataclass
 class SubtitleStream(Stream):
@@ -247,6 +256,12 @@ class SubtitleStream(Stream):
         stream = cls.from_file(file_path)[int(track)]
         stream.file_path = file_path
         return stream
+
+    def copy(self, with_new_path: Path | None = None) -> "SubtitleStream":
+        new_stream = deepcopy(self)
+        if with_new_path is not None:
+            new_stream.file_path = with_new_path
+        return new_stream
 
 
 def _parse_duration(duration: str | None) -> float | None:

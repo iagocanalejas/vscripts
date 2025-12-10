@@ -4,6 +4,8 @@ from typing import Any
 
 from whisper import Whisper
 
+from pyutils.paths import create_temp_dir
+from vscripts.commands._extract import extract
 from vscripts.constants import ISO639_3_TO_1, UNKNOWN_LANGUAGE
 from vscripts.data.language import find_audio_language
 from vscripts.data.streams import AudioStream, FileStreams, SubtitleStream
@@ -42,10 +44,17 @@ def generate_subtitles(
 
     def inner_generate(index: int, lang: str | None) -> None:
         stream = streams.audios[index]
+        og_stream: AudioStream | None = None
+
+        file_streams = [a for a in streams.audios if a.file_path == stream.file_path]
+        if len(file_streams) > 1:
+            logger.info(f"multiple audio streams found in {stream.file_path.name}, extracting stream {stream.index}")
+            og_stream = stream.copy()
+            extract(streams, track=file_streams.index(stream), stream_type="audio", output=Path(temp_dir))
 
         if lang is None:
             lang = find_audio_language(stream)
-            logger.info(f"inferred '{lang=}' for {stream.index} in {stream.file_path.name}")
+            logger.info(f"inferred {lang=} for {stream.index} in {stream.file_path.name}")
 
         if lang == UNKNOWN_LANGUAGE:  # pragma: no cover
             logger.warning(f"could not determine language for {stream.index}, defaulting to 'eng'")
@@ -74,10 +83,13 @@ def generate_subtitles(
         )
         new_stream.file_path = output_path
         streams.subtitles.append(new_stream)
+        if og_stream is not None:  # reset original stream if it was altered during extraction
+            streams.audios[index] = og_stream
 
-    indices = range(len(streams.audios)) if track is None else [track]
-    for i in indices:
-        inner_generate(i, lang=language)
+    with create_temp_dir() as temp_dir:
+        indices = range(len(streams.audios)) if track is None else [track]
+        for i in indices:
+            inner_generate(i, lang=language)
 
     return streams
 

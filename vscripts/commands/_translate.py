@@ -49,7 +49,7 @@ def translate_subtitles(
 
         if lang is None:
             lang = find_subs_language(stream)
-            logger.info(f"inferred '{lang=}' for {stream.index} in {stream.file_path.name}")
+            logger.info(f"inferred {lang=} for {stream.index} in {stream.file_path.name}")
 
         if lang == UNKNOWN_LANGUAGE:  # pragma: no cover
             logger.warning(f"could not determine language for {stream.index}, defaulting to 'eng'")
