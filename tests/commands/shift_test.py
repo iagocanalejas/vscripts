@@ -39,8 +39,8 @@ def test_shift_io(tmp_path):
 
 @pytest.mark.integration
 def test_simple_delay(tmp_path):
-    input_file = tmp_path / "input.wav"
-    output_file = tmp_path / "output.wav"
+    input_file = tmp_path / "input.mka"
+    output_file = tmp_path / "output.mka"
 
     generate_test_audio(input_file)
 

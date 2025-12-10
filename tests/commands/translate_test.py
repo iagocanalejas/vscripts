@@ -24,7 +24,7 @@ def test_translate_subtitles_basic(tmp_path):
     streams = FileStreams.from_file(subs_file)
     assert len(streams.subtitles) == 1
 
-    output = translate_subtitles(streams, "spa", from_language="en", output=output)
+    output = translate_subtitles(streams, "spa", from_language="eng", output=output)
 
     assert len(output.subtitles) == 2
     output = output.subtitles[1].file_path

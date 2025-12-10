@@ -28,8 +28,8 @@ def test_merge_io(tmp_path):
 def test_merge_two_videos(tmp_path):
     target_path = generate_test_full(tmp_path, duration=1)
     data_path = generate_test_full(tmp_path, duration=1, output_name="data_video.mp4")
-    audio1_stream = AudioStream.from_file(generate_test_audio(tmp_path / "audio1.mp3", duration=1))[0]
-    audio2_stream = AudioStream.from_file(generate_test_audio(tmp_path / "audio2.mp3", duration=1))[0]
+    audio1_stream = AudioStream.from_file(generate_test_audio(tmp_path / "audio1.mka", duration=1))[0]
+    audio2_stream = AudioStream.from_file(generate_test_audio(tmp_path / "audio2.mka", duration=1))[0]
     subs1_stream = SubtitleStream.from_file(generate_test_subs(tmp_path / "subs1.srt"))[0]
     subs2_stream = SubtitleStream.from_file(generate_test_subs(tmp_path / "subs2.srt"))[0]
 
@@ -92,8 +92,8 @@ def test_merge_two_videos(tmp_path):
 def test_merge_two_videos_forced_subs(tmp_path):
     target_path = generate_test_full(tmp_path, duration=1)
     data_path = generate_test_full(tmp_path, duration=1, output_name="data_video.mp4")
-    audio1_stream = AudioStream.from_file(generate_test_audio(tmp_path / "audio1.mp3", duration=1))[0]
-    audio2_stream = AudioStream.from_file(generate_test_audio(tmp_path / "audio2.mp3", duration=1))[0]
+    audio1_stream = AudioStream.from_file(generate_test_audio(tmp_path / "audio1.mka", duration=1))[0]
+    audio2_stream = AudioStream.from_file(generate_test_audio(tmp_path / "audio2.mka", duration=1))[0]
     subs1_stream = SubtitleStream.from_file(generate_test_subs(tmp_path / "subs1.srt"))[0]
     subs2_stream = SubtitleStream.from_file(generate_test_subs(tmp_path / "subs2.srt"))[0]
     subs3_stream = SubtitleStream.from_file(generate_test_subs(tmp_path / "subs3.srt"))[0]

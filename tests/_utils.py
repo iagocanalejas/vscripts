@@ -18,15 +18,20 @@ This is a test.
     return path
 
 
-def generate_test_audio(path: Path, freq: int = 1000, duration: float = 0.5) -> Path:
-    command = [
-        "-f",
-        "lavfi",
-        "-i",
-        f"sine=frequency={freq}:duration={duration}",
+def generate_test_audio(path: Path, freq: int = 1000, duration: float = 2.5, streams: int = 1) -> Path:
+    command = []
+
+    for _ in range(streams):
+        command += ["-f", "lavfi", "-i", f"sine=frequency={freq}:duration={duration}"]
+
+    for i in range(streams):
+        command += ["-map", f"{i}:a"]
+
+    command += [
         str(path),
         "-y",
     ]
+
     run_ffmpeg_command(command)
     return path
 
@@ -56,7 +61,7 @@ def generate_test_full(
 ) -> Path:
     video_path = tmp_path / "video.mp4"
     subs_path = tmp_path / "subs.srt"
-    audio_path = tmp_path / "audio.mp3"
+    audio_path = tmp_path / "audio.mka"
     generate_test_video(video_path, duration=duration, rate=rate)
     generate_test_audio(audio_path, duration=duration)
     generate_test_subs(subs_path)

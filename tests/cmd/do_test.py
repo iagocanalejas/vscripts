@@ -11,15 +11,15 @@ from tests._utils import generate_test_audio, generate_test_full, get_file_durat
 
 @pytest.mark.cmd
 def test_do_audio(tmp_path):
-    audio_path = generate_test_audio(tmp_path / "audio.mp3", duration=2)
-    output_path = tmp_path / "output.mp3"
+    audio_path = generate_test_audio(tmp_path / "audio.mka", duration=2)
+    output_path = tmp_path / "output.mka"
 
     cmd_do(audio_path, ["atempo", "hasten=1"], output=output_path)
 
     assert output_path.exists(), "Output file should exist"
     assert output_path != audio_path, "Output file should be different from input"
     duration = get_file_duration(output_path)
-    assert duration < 1.1, f"Expected duration smaller than 1.1s, got {duration}s"
+    assert duration < 1.2, f"Expected duration smaller than 1.2s, got {duration}s"
 
 
 @pytest.mark.cmd

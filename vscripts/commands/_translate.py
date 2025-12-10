@@ -6,7 +6,7 @@ from typing import Literal
 from googletrans import Translator
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 
-from vscripts.constants import INVISIBLE_SEPARATOR, ISO639_3_TO_1, UNKNOWN_LANGUAGE
+from vscripts.constants import INVISIBLE_SEPARATOR, ISO639_1_TO_3, ISO639_3_TO_1, UNKNOWN_LANGUAGE
 from vscripts.data.language import find_subs_language
 from vscripts.data.streams import FileStreams, SubtitleStream
 from vscripts.utils import get_output_file_path, parse_srt, rebuild_srt
@@ -43,9 +43,17 @@ def translate_subtitles(
         raise ValueError(f"invalid {streams.subtitles[track].file_path=}")
     if track is None and any(not a.file_path.is_file() for a in streams.subtitles):
         raise ValueError(f"one or more subtitle stream file paths are invalid in {streams.subtitles=}")
+    if len(to_language) != 3:
+        raise ValueError(f"invalid target language code '{to_language}', must be ISO 639-3")
+    if from_language is not None and len(from_language) != 3:
+        raise ValueError(f"invalid source language code '{from_language}', must be ISO 639-3")
 
     def inner_translate(index: int, to_lang: str, lang: str | None) -> None:
         stream = streams.subtitles[index]
+        output_path = get_output_file_path(
+            output or stream.file_path.parent,
+            default_name=f"{stream.file_path.stem}_{to_lang}.srt",
+        )
 
         if lang is None:
             lang = find_subs_language(stream)
@@ -61,11 +69,6 @@ def translate_subtitles(
         if len(to_lang) == 3:
             logger.debug(f"converting ISO 639-3 lang code '{to_lang}' to ISO 639-1")
             to_lang = ISO639_3_TO_1.get(to_lang, to_lang)
-
-        output_path = get_output_file_path(
-            output or stream.file_path.parent,
-            default_name=f"{stream.file_path.stem}_{to_lang}.srt",
-        )
 
         with stream.file_path.open("r", encoding="utf-8", errors="ignore") as f:
             content = f.read()
@@ -84,7 +87,7 @@ def translate_subtitles(
             index=0,
             codec_name="mov_text",
             codec_type="subtitle",
-            language=to_lang,
+            language=ISO639_1_TO_3.get(to_lang, to_lang),
             generated=True,
         )
         new_stream.file_path = output_path

@@ -48,7 +48,7 @@ def suffix_by_codec(codec: str | None, codec_type: Literal["audio", "subtitle"])
         return "m4a" if codec_type == "audio" else "srt"
     if codec.lower() in SRT_FFMPEG_CODECS:
         return "srt"
-    if codec.lower() == "ac3":
+    if codec.lower() in {"ac3", "vorbis"}:
         return "mka"
     return codec.lower()
 

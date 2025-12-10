@@ -25,7 +25,7 @@ def test_atempo_io(tmp_path):
 
 @pytest.mark.integration
 def test_atempo_with_explicit_from_rate(tmp_path):
-    input_file = tmp_path / "video.mp4"
+    input_file = tmp_path / "video.mka"
     output = tmp_path / "atempoed.mkv"
     generate_test_audio(input_file)
 
@@ -35,12 +35,12 @@ def test_atempo_with_explicit_from_rate(tmp_path):
     assert output != input_file, "Output file should be different from input"
 
     duration = get_file_duration(output)
-    assert 0 < duration < 0.5, f"Expected shorter duration, got {duration}s"
+    assert 0 < duration < 2.2, f"Expected shorter duration, got {duration}s"
 
 
 @pytest.mark.integration
 def test_atempo_infering_from_rate(tmp_path):
-    input_file = tmp_path / "video.mp4"
+    input_file = tmp_path / "video.mka"
     output = tmp_path / "atempoed.mkv"
     generate_test_audio(input_file)
 
@@ -61,7 +61,7 @@ def test_atempo_infering_from_rate(tmp_path):
     assert output != input_file, "Output file should be different from input"
 
     duration = get_file_duration(output)
-    assert 0 < duration < 0.5, f"Expected shorter duration, got {duration}s"
+    assert 0 < duration < 2.2, f"Expected shorter duration, got {duration}s"
 
 
 @pytest.mark.integration
@@ -76,7 +76,7 @@ def test_simple_atempo_default_value(tmp_path):
     assert output != input_file, "Output file should be different from input"
 
     duration = get_file_duration(output)
-    assert 0 < duration < 0.5, f"Expected shorter duration, got {duration}s"
+    assert 0 < duration < 2.2, f"Expected shorter duration, got {duration}s"
 
 
 @pytest.mark.integration
@@ -91,7 +91,7 @@ def test_simple_atempo_with(tmp_path):
     assert output != input_file, "Output file should be different from input"
 
     duration = get_file_duration(output)
-    assert 0 < duration < 0.5, f"Expected shorter duration, got {duration}s"
+    assert 0 < duration < 2.0, f"Expected shorter duration, got {duration}s"
 
 
 @pytest.mark.integration
