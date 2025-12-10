@@ -21,7 +21,6 @@ COMMAND_EXTRACT = "extract"
 COMMAND_INSPECT = "inspect"
 COMMAND_DISSECT = "dissect"
 COMMAND_APPEND = "append"
-COMMAND_APPEND_SUBS = "subs"
 COMMAND_GENERATE_SUBS = "generate-subs"
 COMMAND_TRANSLATE = "translate"
 
@@ -51,3 +50,9 @@ ISO639_1_TO_3 = {
     "ja": "jpn",
 }
 ISO639_3_TO_1 = {v: k for k, v in ISO639_1_TO_3.items()}
+
+TYPE_TO_FFMPEG_TYPE = {
+    "video": "v",
+    "audio": "a",
+    "subtitle": "s",
+}

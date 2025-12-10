@@ -1,130 +1,83 @@
 import logging
 from pathlib import Path
 
-from vscripts.data.models import ProcessingData
-from vscripts.data.streams import CODEC_TYPE_AUDIO, CODEC_TYPE_SUBTITLE, AudioStream, SubtitleStream
+from vscripts.data.streams import FileStreams
 from vscripts.utils import get_output_file_path, run_ffmpeg_command
-from vscripts.utils._utils import get_streams, has_audio
 
 logger = logging.getLogger("vscripts")
 
 
 def append(
-    attachment: Path,
-    root: Path,
+    streams: FileStreams,
     *,
     output: Path | None = None,
-    extra: ProcessingData | None = None,
     **_,
-) -> Path:
+) -> FileStreams:
     """
-    Append the contents of one multimedia file into another using FFmpeg and save the result as a new file.
-    Args:
-        attachment (Path): The path to the file that will be appended into another.
-        root (Path): The path to the destination file into which 'attachment' will be appended.
-        output (Path | None): The path to save the output file.
-        extra (ProcessingData | None): Additional processing data that may contain audio stream information.
-    Returns: The path to the newly created file that contains the appended content.
-    """
-    if not attachment.is_file():
-        raise ValueError(f"invalid {attachment=}")
-    if not root.is_file():
-        raise ValueError(f"invalid {root=}")
-    streams = get_streams(attachment)
-    if len(streams) != 1 or streams[0].get("codec_type") not in [CODEC_TYPE_AUDIO, CODEC_TYPE_SUBTITLE]:
-        raise ValueError(f"{attachment} must contain exactly one stream")
+    Appends multiple multimedia streams into a single file using FFmpeg.
 
-    output = get_output_file_path(output or root.parent, f"{root.stem}_appended.mkv")
+    The function will use all the streams from the provided video file
+    and one audio or subtitle stream for the rest of the files.
+    Args:
+        streams (FileStreams): The FileStreams object containing the multimedia streams to append.
+        output (Path | None): The path to save the output file.
+    Returns: The FileStreams object representing the newly created file.
+    """
+    if streams.video is not None and not streams.video.file_path.is_file():
+        raise ValueError(f"invalid {streams.video.file_path=}")
+    if any(not audio.file_path.is_file() for audio in streams.audios):
+        raise ValueError("one or more invalid audio file paths")
+    if any(not subtitle.file_path.is_file() for subtitle in streams.subtitles):
+        raise ValueError("one or more invalid subtitle file paths")
+
+    output = get_output_file_path(
+        output or streams.file_path.parent,
+        default_name=f"{streams.file_path.stem}_appended.mkv",
+    )
     if output.suffix.lower() != ".mkv":
-        raise ValueError("output file must be an MKV file")
+        raise ValueError("output file must be a MKV file")
 
-    logger.info(f"appending {attachment.name} into {root.name}\n\toutputing to {output}")
-    command = ["-i", str(root), "-i", str(attachment), "-map", "0:v?"]
+    input_paths = []
+    inputs = []
+    maps = []
+    metadata = []
 
-    if has_audio(attachment):
-        # map all audio tracks except the one being appended
-        for i in range(len(AudioStream.from_file(root))):
-            if extra is not None and i == extra.audio_track:
-                continue
-            command += ["-map", f"0:a:{i}?"]
-        command += ["-map", "1:a"]
-    else:
-        command += ["-map", "0:a", "-map", "1:s", "-disposition:s:0", "default"]
+    if streams.video is not None:
+        inputs += ["-i", str(streams.video.file_path)]
+        maps += ["-map", "0:v"]
+        input_paths.append(streams.video.file_path)
 
-    command += [
-        "-map",
-        "0:s?",
-        "-map_metadata",
-        "0",
-        "-map_metadata",
-        "1",
-        "-c:v",
-        "copy",
-        "-c:a",
-        "copy",
-    ]
+    for audio in streams.audios:
+        if audio.file_path not in input_paths:
+            inputs += ["-i", str(audio.file_path)]
+            input_paths.append(audio.file_path)
 
-    # map and set metadata for subtitle streams
-    for i, subs_stream in enumerate(SubtitleStream.from_file(root)):
-        if subs_stream.codec_name in ["mov_text"]:
-            command += [f"-c:s:{i}", "srt"]
-        else:
-            command += [f"-c:s:{i}", "copy"]
+        audio_stream_index = audio.index
+        if streams.video is not None and audio.file_path == streams.video.file_path:
+            audio_stream_index -= 1
 
-    command.append(str(output))
+        maps += ["-map", f"{input_paths.index(audio.file_path)}:a:{audio_stream_index}"]
+        # TODO: set language
+
+    for subtitle in streams.subtitles:
+        if subtitle.file_path not in input_paths:
+            inputs += ["-i", str(subtitle.file_path)]
+            input_paths.append(subtitle.file_path)
+
+        subtitle_stream_index = subtitle.index
+        if subtitle_stream_index != 0:
+            if streams.video is not None and subtitle.file_path == streams.video.file_path:
+                subtitle_stream_index -= 1
+            subtitle_stream_index -= len(streams.audios)
+
+        maps += ["-map", f"{input_paths.index(subtitle.file_path)}:s:{subtitle_stream_index}"]
+        # TODO: set language and default
+
+    for i in range(len(input_paths)):
+        metadata += ["-map_metadata", f"{i}"]
+
+    command = inputs + maps + metadata + [str(output)]
+
+    logger.info(f"appending {input_paths}\n\toutputing to {output}")
     run_ffmpeg_command(command)
-    return output
-
-
-def append_subs(
-    attachment: Path,
-    root: Path,
-    language: str | None = None,
-    *,
-    output: Path | None = None,
-    **_,
-) -> Path:
-    """
-    Append subtitles to a video file using FFmpeg and save it as a new file.
-    Args:
-        attachment (Path): The path to the subtitle file to append.
-        root (Path): The path to the input video file.
-        language (str | None): The language code for the subtitles.
-        output (Path | None): The path to save the output file.
-    Returns: The path to the newly created video file with subtitles.
-    """
-    if not attachment.is_file():
-        raise ValueError(f"invalid {attachment=}")
-    if not root.is_file():
-        raise ValueError(f"invalid {root=}")
-
-    output = get_output_file_path(output or root.parent, f"{root.stem}_subs{root.suffix}")
-
-    logger.info(f"appending subtitles {attachment.name} into {root.name}\n\toutputing to {output}")
-    command = [
-        "-i",
-        str(root),
-        "-i",
-        str(attachment),
-        "-map",
-        "0",
-        "-map",
-        "1",
-        "-map_metadata",
-        "0",
-        "-map_metadata",
-        "1",
-        "-c",
-        "copy",
-    ]
-    if language:
-        command += [
-            f"-metadata:s:s:{len(SubtitleStream.from_file(root))}",
-            f"language={language}",
-        ]
-    if "mp4" in root.suffix:
-        command += ["-scodec", "mov_text"]
-
-    command.append(str(output))
-    run_ffmpeg_command(command)
-    return output
+    return FileStreams.from_file(output)

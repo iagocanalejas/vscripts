@@ -3,20 +3,24 @@ from unittest.mock import patch
 
 import pytest
 from vscripts.commands._atempo import atempo, atempo_video, atempo_with
-from vscripts.utils import get_file_duration
+from vscripts.data.streams import FileStreams
 
-from tests._utils import generate_test_audio, generate_test_video
+from tests._utils import generate_test_audio, generate_test_full, generate_test_video, get_file_duration
 
 
-def test_atempo_io():
+def test_atempo_io(tmp_path):
+    streams = FileStreams.from_file(generate_test_full(tmp_path, duration=1))
     with pytest.raises(ValueError):
-        atempo(Path("non_existent_file.wav"), from_rate=24.0, to_rate=30.0)
+        streams.file_path = Path("non_existent_file.wav")
+        atempo(streams, from_rate=24.0, to_rate=30.0)
 
     with pytest.raises(ValueError):
-        atempo_with(Path("non_existent_file.wav"), 0.5)
+        streams.file_path = Path("non_existent_file.wav")
+        atempo_with(streams, atempo_value=0.5)
 
     with pytest.raises(ValueError):
-        atempo_video(Path("non_existent_file.wav"), to_rate=30.0)
+        streams.file_path = Path("non_existent_file.mp4")
+        atempo_video(streams, to_rate=30.0)
 
 
 @pytest.mark.integration
@@ -25,10 +29,10 @@ def test_atempo_with_explicit_from_rate(tmp_path):
     output = tmp_path / "atempoed.mkv"
     generate_test_audio(input_file)
 
-    output_file = atempo(input_file, from_rate=25.0, to_rate=30.0, output=output)
+    _ = atempo(FileStreams.from_file(input_file), from_rate=25.0, to_rate=30.0, output=output)
 
-    assert output_file.exists(), "Output file should exist"
-    assert output_file != input_file, "Output file should be different from input"
+    assert output.exists(), "Output file should exist"
+    assert output != input_file, "Output file should be different from input"
 
     duration = get_file_duration(output)
     assert 0 < duration < 0.5, f"Expected shorter duration, got {duration}s"
@@ -41,20 +45,20 @@ def test_atempo_infering_from_rate(tmp_path):
     generate_test_audio(input_file)
 
     with (
-        patch("vscripts.commands._atempo.has_video", return_value=True),
         patch(
             "vscripts.data.streams._ffprobe_streams",
             return_value={
                 "streams": [
-                    {"r_frame_rate": "25/1", "codec_type": "video", "codec_name": "hevc", "tags": {"language": "eng"}}
+                    {"r_frame_rate": "25/1", "codec_type": "video", "codec_name": "hevc", "tags": {"language": "eng"}},
+                    {"codec_type": "audio", "codec_name": "aac", "tags": {"language": "eng"}},
                 ]
             },
         ),
     ):
-        output_file = atempo(input_file, from_rate=None, to_rate=30.0, output=output)
+        _ = atempo(FileStreams.from_file(input_file), from_rate=None, to_rate=30.0, output=output)
 
-    assert output_file.exists(), "Output file should exist"
-    assert output_file != input_file, "Output file should be different from input"
+    assert output.exists(), "Output file should exist"
+    assert output != input_file, "Output file should be different from input"
 
     duration = get_file_duration(output)
     assert 0 < duration < 0.5, f"Expected shorter duration, got {duration}s"
@@ -66,10 +70,10 @@ def test_simple_atempo_default_value(tmp_path):
     output = tmp_path / "atempoed.mkv"
     generate_test_audio(input_file)
 
-    output_file = atempo(input_file, to_rate=30.0, output=output)
+    _ = atempo(FileStreams.from_file(input_file), to_rate=30.0, output=output)
 
-    assert output_file.exists(), "Output file should exist"
-    assert output_file != input_file, "Output file should be different from input"
+    assert output.exists(), "Output file should exist"
+    assert output != input_file, "Output file should be different from input"
 
     duration = get_file_duration(output)
     assert 0 < duration < 0.5, f"Expected shorter duration, got {duration}s"
@@ -81,10 +85,10 @@ def test_simple_atempo_with(tmp_path):
     output = tmp_path / "atempoed.mkv"
     generate_test_audio(input_file)
 
-    output_file = atempo_with(input_file, atempo_value=1.5, output=output)
+    _ = atempo_with(FileStreams.from_file(input_file), atempo_value=1.5, output=output)
 
-    assert output_file.exists(), "Output file should exist"
-    assert output_file != input_file, "Output file should be different from input"
+    assert output.exists(), "Output file should exist"
+    assert output != input_file, "Output file should be different from input"
 
     duration = get_file_duration(output)
     assert 0 < duration < 0.5, f"Expected shorter duration, got {duration}s"
@@ -96,10 +100,11 @@ def test_simple_atempo_video(tmp_path):
     output_file = tmp_path / "tempoed.mp4"
     generate_test_video(input_file, duration=1.0, rate=30)
 
-    result = atempo_video(input_file, to_rate=25, output=output_file)
+    result = atempo_video(FileStreams.from_file(input_file), to_rate=25, output=output_file)
 
-    assert result.exists(), "Output file should exist"
-    assert result != input_file, "Output should be a new file"
+    assert result.video is not None, "Result should have a video stream"
+    assert result.video.file_path.exists(), "Output file should exist"
+    assert result.video.file_path != input_file, "Output should be a new file"
 
-    duration = get_file_duration(result)
+    duration = get_file_duration(result.video.file_path)
     assert 1 < duration < 1.1, f"Expected shorter video, got {duration}s"

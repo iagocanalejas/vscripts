@@ -4,21 +4,37 @@ from pathlib import Path
 import pytest
 from vscripts.commands._shift import delay, hasten, inspect, reencode
 from vscripts.constants import ENCODING_1080P
-from vscripts.data.streams import _ffprobe_streams
-from vscripts.utils import get_file_duration, has_audio, has_subtitles
+from vscripts.data.streams import FileStreams, _ffprobe_streams
 
-from tests._utils import generate_test_audio, generate_test_full, generate_test_video
+from tests._utils import (
+    generate_test_audio,
+    generate_test_full,
+    generate_test_video,
+    get_file_duration,
+    has_audio,
+    has_subtitles,
+)
 
 
-def test_shift_io():
+def test_shift_io(tmp_path):
+    streams = FileStreams.from_file(generate_test_full(tmp_path, duration=1))
+    assert streams.video is not None, "Test file must have a video stream"
     with pytest.raises(ValueError):
-        delay(Path("non_existent_file.wav"), 0.5)
+        streams.audios[0].file_path = Path("non_existent_file.wav")
+        delay(streams, 0.5)
 
     with pytest.raises(ValueError):
-        hasten(Path("non_existent_file.wav"), 1.5)
+        streams.audios[0].file_path = Path("non_existent_file.wav")
+        hasten(streams, 1.5)
 
     with pytest.raises(ValueError):
-        reencode(Path("non_existent_file.wav"), "1080p")
+        streams.video.file_path = Path("non_existent_file.mp4")
+        reencode(streams, "1080p")
+
+    with pytest.raises(ValueError):
+        streams = FileStreams.from_file(generate_test_full(tmp_path, duration=1))
+        streams.video = None
+        reencode(streams, "1080p")
 
 
 @pytest.mark.integration
@@ -29,13 +45,16 @@ def test_simple_delay(tmp_path):
     generate_test_audio(input_file)
 
     assert input_file.exists() and input_file.stat().st_size > 0
+    streams = FileStreams.from_file(input_file)
+    streams.audios[0].duration = None
 
-    result = delay(input_file, 0.25, output=output_file)
+    result = delay(streams, 0.25, output=output_file)
 
-    assert result == output_file
+    assert result.audios[0].file_path == output_file
     assert output_file.exists()
     assert output_file.stat().st_size > 0
     assert get_file_duration(output_file) >= get_file_duration(input_file) + 0.2
+    assert result.audios[0].duration is None
 
 
 @pytest.mark.integration
@@ -47,12 +66,13 @@ def test_simple_hasten(tmp_path):
 
     assert input_file.exists() and input_file.stat().st_size > 0
 
-    result = hasten(input_file, 0.25, output=output_file)
+    result = hasten(FileStreams.from_file(input_file), 0.25, output=output_file)
 
-    assert result == output_file
+    assert result.audios[0].file_path == output_file
     assert output_file.exists()
     assert output_file.stat().st_size > 0
     assert get_file_duration(output_file) >= get_file_duration(input_file) - 0.3
+    assert result.audios[0].duration is not None and result.audios[0].duration >= get_file_duration(input_file) - 0.3
 
 
 @pytest.mark.integration
@@ -61,7 +81,8 @@ def test_inspect_adds_language_metadata(tmp_path):
     assert has_audio(video_path)
     assert has_subtitles(video_path)
 
-    inspected_path = inspect(video_path, force_detection=True)
+    inspected_streams = inspect(FileStreams.from_file(video_path), force_detection=True)
+    inspected_path = inspected_streams.file_path
 
     assert inspected_path.exists(), "Output file should exist"
     assert inspected_path != video_path, "Output file should be a new file"
@@ -83,8 +104,8 @@ def test_inspect_adds_language_metadata(tmp_path):
 @pytest.mark.integration
 def test_inspect_no_metadata_no_processing(tmp_path):
     empty_video = generate_test_video(tmp_path / "test_video2.mp4", duration=1)
-    no_metadata_path = inspect(empty_video)
-    assert no_metadata_path == empty_video, "Should return same path if no metadata added"
+    no_metadata_streams = inspect(FileStreams.from_file(empty_video))
+    assert no_metadata_streams.file_path == empty_video, "Should return same path if no metadata added"
 
 
 @pytest.mark.integration
@@ -105,8 +126,8 @@ def test_reencode(monkeypatch, tmp_path):
     input_file = generate_test_full(tmp_path, duration=2)
     output_file = tmp_path / "reencoded.mkv"
 
-    result = reencode(input_file, ENCODING_1080P, output=output_file)
+    result = reencode(FileStreams.from_file(input_file), ENCODING_1080P, output=output_file)
 
-    assert result == output_file
+    assert result.file_path == output_file
     assert output_file.exists()
     assert output_file.stat().st_size > 0
