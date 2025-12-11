@@ -1,6 +1,7 @@
 import logging
 from pathlib import Path
 
+from vscripts.constants import UNKNOWN_LANGUAGE
 from vscripts.data.streams import FileStreams
 from vscripts.utils import get_output_file_path, run_ffmpeg_command
 
@@ -47,31 +48,29 @@ def append(
         maps += ["-map", "0:v"]
         input_paths.append(streams.video.file_path)
 
+    new_audio_index = 0
     for audio in streams.audios:
         if audio.file_path not in input_paths:
             inputs += ["-i", str(audio.file_path)]
             input_paths.append(audio.file_path)
 
-        audio_stream_index = audio.index
-        if streams.video is not None and audio.file_path == streams.video.file_path:
-            audio_stream_index -= 1
+        maps += ["-map", f"{input_paths.index(audio.file_path)}:a:{audio.ffmpeg_index}"]
+        if audio.language != UNKNOWN_LANGUAGE:
+            metadata += [f"-metadata:s:a:{new_audio_index}", f"language={audio.language}"]
+        new_audio_index += 1
 
-        maps += ["-map", f"{input_paths.index(audio.file_path)}:a:{audio_stream_index}"]
-        # TODO: set language
-
+    new_subtitle_index = 0
     for subtitle in streams.subtitles:
         if subtitle.file_path not in input_paths:
             inputs += ["-i", str(subtitle.file_path)]
             input_paths.append(subtitle.file_path)
 
-        subtitle_stream_index = subtitle.index
-        if subtitle_stream_index != 0:
-            if streams.video is not None and subtitle.file_path == streams.video.file_path:
-                subtitle_stream_index -= 1
-            subtitle_stream_index -= len(streams.audios)
-
-        maps += ["-map", f"{input_paths.index(subtitle.file_path)}:s:{subtitle_stream_index}"]
-        # TODO: set language and default
+        maps += ["-map", f"{input_paths.index(subtitle.file_path)}:s:{subtitle.ffmpeg_index}"]
+        if subtitle.language != UNKNOWN_LANGUAGE:
+            metadata += [f"-metadata:s:s:{new_subtitle_index}", f"language={subtitle.language}"]
+        if subtitle.default:
+            metadata += [f"-disposition:s:{new_subtitle_index}", "default"]
+        new_subtitle_index += 1
 
     for i in range(len(input_paths)):
         metadata += ["-map_metadata", f"{i}"]

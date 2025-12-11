@@ -62,7 +62,7 @@ def atempo_with(
     if atempo_value < 0:
         raise ValueError(f"invalid atempo value {atempo_value=}, must be non-negative")
     if track is not None and (track < 0 or track >= len(streams.audios)):
-        raise ValueError(f"invalid audio track index {track=} for {streams.audios=}")
+        raise ValueError(f"invalid audio {track=} for {streams.audios=}")
     if track is not None and not streams.audios[track].file_path.is_file():
         raise ValueError(f"invalid {streams.audios[track].file_path=}")
     if track is None and any(not a.file_path.is_file() for a in streams.audios):
@@ -79,6 +79,7 @@ def atempo_with(
     indices = range(len(streams.audios)) if track is None else [track]
     for i in indices:
         command += [f"-filter:a:{i}", f"atempo={atempo_value}"]
+        streams.audios[i].ffmpeg_index = 0
         streams.audios[i].file_path = output
         _update_duration(streams.audios[i], atempo_value)
 

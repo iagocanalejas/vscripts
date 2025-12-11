@@ -34,7 +34,7 @@ def generate_subtitles(
     if len(streams.audios) < 1:
         raise ValueError(f"no audio streams found in {streams.file_path=}, cannot generate")
     if track is not None and (track < 0 or track >= len(streams.audios)):
-        raise ValueError(f"invalid audio track index {track=} for {streams.audios=}")
+        raise ValueError(f"invalid audio {track=} for {streams.audios=}")
     if track is not None and not streams.audios[track].file_path.is_file():
         raise ValueError(f"invalid {streams.audios[track].file_path=}")
     if track is None and any(not a.file_path.is_file() for a in streams.audios):
@@ -55,29 +55,30 @@ def generate_subtitles(
 
         file_streams = [a for a in streams.audios if a.file_path == stream.file_path]
         if len(file_streams) > 1:
-            logger.info(f"multiple audio streams found in {stream.file_path.name}, extracting stream {stream.index}")
+            logger.info(f"multiple audios found in {stream.file_path.name}, extracting stream={stream.ffmpeg_index}")
             og_stream = stream.copy()
             extract(streams, track=file_streams.index(stream), stream_type="audio", output=Path(temp_dir))
 
         if lang is None:
             lang = find_audio_language(stream)
-            logger.info(f"inferred {lang=} for {stream.index} in {stream.file_path.name}")
+            logger.info(f"inferred {lang=} for audio={stream.ffmpeg_index} in {stream.file_path.name}")
 
         if lang == UNKNOWN_LANGUAGE:  # pragma: no cover
-            logger.warning(f"could not determine language for {stream.index}, defaulting to 'eng'")
+            logger.warning(f"could not determine language for audio={stream.ffmpeg_index}, defaulting to 'eng'")
             lang = "eng"
 
         if len(lang) == 3:
-            logger.debug(f"converting ISO 639-3 language code '{lang}' to ISO 639-1")
+            logger.debug(f"converting ISO 639-3 language code {lang=} to ISO 639-1")
             lang = ISO639_3_TO_1.get(lang, lang)
 
-        logger.info(f"generating subtitles for {stream.index} in {stream.file_path.name} using '{lang=}'")
+        logger.info(f"generating subtitles for audio={stream.ffmpeg_index} in {stream.file_path.name} using {lang=}")
         content = _transcribe(model, stream, language=lang)
         with output_path.open("w", encoding="utf-8") as f:
             f.write(content)
 
         new_stream = SubtitleStream(
-            index=0,
+            _index=0,
+            ffmpeg_index=0,
             codec_name="mov_text",
             codec_type="subtitle",
             language=ISO639_1_TO_3.get(lang, lang),

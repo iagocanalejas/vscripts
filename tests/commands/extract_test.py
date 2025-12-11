@@ -32,12 +32,12 @@ def test_extract_audio_and_subs(tmp_path):
 
     audio_out = audio_streams.audios[0]
     assert audio_out.file_path.exists(), "Audio output file should exist"
-    assert audio_out.index == 0, "Extracted audio stream index should be 0"
+    assert audio_out.ffmpeg_index == 0, "Extracted audio stream index should be 0"
     assert has_audio(audio_out.file_path), "Extracted file should contain an audio stream"
 
     subs_out = subs_streams.subtitles[0]
     assert subs_out.file_path.exists(), "Subtitle output file should exist"
-    assert subs_out.index == 0, "Extracted subtitle stream index should be 0"
+    assert subs_out.ffmpeg_index == 0, "Extracted subtitle stream index should be 0"
     content = subs_out.file_path.read_text(errors="ignore")
     assert "Hello" in content or len(content) > 0, "Subtitle file should contain text"
 
@@ -58,10 +58,10 @@ def test_dissect(tmp_path):
 
     assert streams.video is not None, "Dissected streams should include a video stream"
     assert streams.video.file_path.exists(), "Video stream file should exist"
-    assert streams.video.index == 0, "Video stream index should be 0"
+    assert streams.video.ffmpeg_index == 0, "Video stream index should be 0"
     for i, audio in enumerate(streams.audios):
         assert audio.file_path.exists(), f"Audio stream {i} file should exist"
-        assert audio.index == 0, f"Audio stream {i} index should be 0"
+        assert audio.ffmpeg_index == 0, f"Audio stream {i} index should be 0"
     for i, subs in enumerate(streams.subtitles):
         assert subs.file_path.exists(), f"Subtitle stream {i} file should exist"
-        assert subs.index == 0, f"Subtitle stream {i} index should be 0"
+        assert subs.ffmpeg_index == 0, f"Subtitle stream {i} index should be 0"

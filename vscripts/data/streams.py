@@ -66,6 +66,15 @@ class FileStreams:
                 subtitle.file_path = file_path
                 subtitles.append(subtitle)
 
+        for audio in audios:
+            if video is not None:
+                audio.ffmpeg_index = audio.index - 1
+        for subtitle in subtitles:
+            subtitle.ffmpeg_index = subtitle.index
+            if video is not None:
+                subtitle.ffmpeg_index -= 1
+            subtitle.ffmpeg_index -= len(audios)
+
         return cls(
             video=video,
             audios=audios,
@@ -82,11 +91,16 @@ class FileStreams:
 
 @dataclass
 class Stream:
-    index: int
+    _index: int
     codec_name: str
     codec_type: CodecType
+    ffmpeg_index: int = 0
     file_path: Path = field(init=False)
     tags: dict[str, str] = field(default_factory=dict)
+
+    @property
+    def index(self) -> int:
+        return self._index
 
 
 @dataclass
@@ -110,7 +124,7 @@ class VideoStream(Stream):
             duration = _parse_duration(duration_time)
 
         return VideoStream(
-            index=data.get("index", -1),
+            _index=data["index"],
             duration=float(duration) if duration is not None else None,
             r_frame_rate=_parse_frame_rate(data.get("r_frame_rate")),
             codec_name=data["codec_name"],
@@ -187,7 +201,7 @@ class AudioStream(Stream):
             lang = UNKNOWN_LANGUAGE
 
         return AudioStream(
-            index=data.get("index", -1),
+            _index=data["index"],
             language=lang,
             duration=float(duration) if duration is not None else None,
             codec_name=data["codec_name"],
@@ -236,7 +250,7 @@ class SubtitleStream(Stream):
             lang = UNKNOWN_LANGUAGE
 
         return SubtitleStream(
-            index=data.get("index", -1),
+            _index=data["index"],
             language=lang,
             codec_name=data["codec_name"],
             codec_type=data["codec_type"],

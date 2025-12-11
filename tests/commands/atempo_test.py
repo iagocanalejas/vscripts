@@ -49,8 +49,14 @@ def test_atempo_infering_from_rate(tmp_path):
             "vscripts.data.streams._ffprobe_streams",
             return_value={
                 "streams": [
-                    {"r_frame_rate": "25/1", "codec_type": "video", "codec_name": "hevc", "tags": {"language": "eng"}},
-                    {"codec_type": "audio", "codec_name": "aac", "tags": {"language": "eng"}},
+                    {
+                        "index": 0,
+                        "r_frame_rate": "25/1",
+                        "codec_type": "video",
+                        "codec_name": "hevc",
+                        "tags": {"language": "eng"},
+                    },
+                    {"index": 1, "codec_type": "audio", "codec_name": "aac", "tags": {"language": "eng"}},
                 ]
             },
         ),

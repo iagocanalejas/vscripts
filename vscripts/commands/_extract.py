@@ -35,7 +35,7 @@ def extract(
     if len(stream_list) < 1:
         raise ValueError(f"no {stream_type} streams found in {streams.file_path=}, cannot extract")
     if track is not None and (track < 0 or track >= len(stream_list)):
-        raise ValueError(f"invalid {stream_type} track index {track=} for {stream_list=}")
+        raise ValueError(f"invalid {stream_type} {track=} for {stream_list=}")
     if track is not None and not stream_list[track].file_path.is_file():
         raise ValueError(f"invalid {stream_type} stream file path {stream_list[track].file_path=}")
     if track is None and any(not s.file_path.is_file() for s in stream_list):
@@ -93,7 +93,7 @@ def extract(
         ]
         run_ffmpeg_command(command)
         stream.file_path = final_path
-        stream.index = 0
+        stream.ffmpeg_index = 0
 
     with create_temp_dir() as temp_dir:
         indices = range(len(stream_list)) if track is None else [track]
@@ -142,7 +142,7 @@ def dissect(streams: FileStreams, *, output: Path | None = None, **_) -> FileStr
         ]
         run_ffmpeg_command(command)
         new_streams.video.file_path = video_path
-        new_streams.video.index = 0
+        new_streams.video.ffmpeg_index = 0
 
     logger.info(f"extracting {len(new_streams.audios)} audio streams")
     for a_stream in new_streams.audios:
@@ -152,7 +152,7 @@ def dissect(streams: FileStreams, *, output: Path | None = None, **_) -> FileStr
             "-i",
             str(a_stream.file_path),
             "-map",
-            f"0:a:{a_stream.index - 1}",
+            f"0:a:{a_stream.ffmpeg_index}",
             "-map_metadata",
             "0",
             "-c",
@@ -161,7 +161,7 @@ def dissect(streams: FileStreams, *, output: Path | None = None, **_) -> FileStr
         ]
         run_ffmpeg_command(command)
         a_stream.file_path = audio_path
-        a_stream.index = 0
+        a_stream.ffmpeg_index = 0
 
     logger.info(f"extracting {len(new_streams.subtitles)} subtitle streams")
     for s_stream in new_streams.subtitles:
@@ -171,7 +171,7 @@ def dissect(streams: FileStreams, *, output: Path | None = None, **_) -> FileStr
             "-i",
             str(s_stream.file_path),
             "-map",
-            f"0:s:{s_stream.index - len(streams.audios) - 1}",
+            f"0:s:{s_stream.ffmpeg_index}",
             "-map_metadata",
             "0",
         ]
@@ -184,6 +184,6 @@ def dissect(streams: FileStreams, *, output: Path | None = None, **_) -> FileStr
         command.append(str(subtitle_path))
         run_ffmpeg_command(command)
         s_stream.file_path = subtitle_path
-        s_stream.index = 0
+        s_stream.ffmpeg_index = 0
 
     return new_streams

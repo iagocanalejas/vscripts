@@ -84,7 +84,8 @@ def translate_subtitles(
             f.write(content)
 
         new_stream = SubtitleStream(
-            index=0,
+            _index=0,
+            ffmpeg_index=0,
             codec_name="mov_text",
             codec_type="subtitle",
             language=ISO639_1_TO_3.get(to_lang, to_lang),

@@ -35,7 +35,7 @@ def delay(
     if delay < 0:
         raise ValueError(f"invalid delay time {delay=}, must be non-negative")
     if track is not None and (track < 0 or track >= len(streams.audios)):
-        raise ValueError(f"invalid audio track index {track=} for {streams.audios=}")
+        raise ValueError(f"invalid audio {track=} for {streams.audios=}")
     if track is not None and not streams.audios[track].file_path.is_file():
         raise ValueError(f"invalid {streams.audios[track].file_path=}")
     if track is None and any(not a.file_path.is_file() for a in streams.audios):
@@ -52,6 +52,7 @@ def delay(
     indices = range(len(streams.audios)) if track is None else [track]
     for i in indices:
         command += [f"-filter:a:{i}", f"adelay={int(float(delay) * 1000)}:all=true"]
+        streams.audios[i].ffmpeg_index = 0
         streams.audios[i].file_path = output
         _update_duration(streams.audios[i], delay)
 
@@ -83,7 +84,7 @@ def hasten(
     if hasten < 0:
         raise ValueError(f"invalid hasten factor {hasten=}, must be non-negative")
     if track is not None and (track < 0 or track >= len(streams.audios)):
-        raise ValueError(f"invalid audio track index {track=} for {streams.audios=}")
+        raise ValueError(f"invalid audio {track=} for {streams.audios=}")
     if track is not None and not streams.audios[track].file_path.is_file():
         raise ValueError(f"invalid {streams.audios[track].file_path=}")
     if track is None and any(not a.file_path.is_file() for a in streams.audios):
@@ -111,6 +112,7 @@ def hasten(
 
     indices = range(len(streams.audios)) if track is None else [track]
     for i in indices:
+        streams.audios[i].ffmpeg_index = 0
         streams.audios[i].file_path = output
         _update_duration(streams.audios[i], -hasten)
 
