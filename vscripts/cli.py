@@ -39,6 +39,12 @@ def cmd_do(input_path: Path, actions: list[str], output: Path | None, **kwargs) 
             COMMANDS[COMMAND_INSPECT](streams, output=output, force_detection=kwargs.get("force_detection", False))
             return 0
 
+        if COMMAND_EXTRACT in parsed_actions.keys() and parsed_actions[COMMAND_EXTRACT] is not None:
+            extract_track = parsed_actions[COMMAND_EXTRACT]
+            assert extract_track is not None
+            kwargs["track"] = extract_track[0]
+            parsed_actions[COMMAND_EXTRACT] = None
+
         last_streams = streams
         with create_temp_dir() as temp_dir:
             logger.info(f"processing {last_streams.file_path} using temporary directory {temp_dir}")
@@ -54,8 +60,6 @@ def cmd_do(input_path: Path, actions: list[str], output: Path | None, **kwargs) 
                         output=Path(temp_dir),
                         **kwargs,
                     )
-                elif command == COMMAND_EXTRACT and args is not None:
-                    last_streams = fn(last_streams, track=args[0], output=Path(temp_dir), **kwargs)
                 elif args is not None:
                     last_streams = fn(last_streams, *args, output=Path(temp_dir), **kwargs)
                 else:
@@ -66,9 +70,12 @@ def cmd_do(input_path: Path, actions: list[str], output: Path | None, **kwargs) 
                     kwargs["track"] = len(last_streams.subtitles) - 1
                     logger.info(f"track set to {kwargs['track']} for further commands")
 
-            if output is None:
-                output = path.parent / last_streams.file_path.name
-            shutil.move(last_streams.file_path, output)
+            for f in [f for f in last_streams.all_paths if f != path]:
+                file_output = output
+                if file_output is None:
+                    file_output = path.parent / f.name
+                logger.info(f"moving processed file {f} to final output location {file_output}")
+                shutil.move(f, file_output)
         return 0
 
     if input_path.is_dir():  # pragma: no cover

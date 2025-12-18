@@ -72,10 +72,11 @@ def append(
             metadata += [f"-disposition:s:{new_subtitle_index}", "default"]
         new_subtitle_index += 1
 
+    og_metadata = []
     for i in range(len(input_paths)):
-        metadata += ["-map_metadata", f"{i}"]
+        og_metadata += ["-map_metadata", f"{i}"]
 
-    command = inputs + maps + metadata + [str(output)]
+    command = inputs + maps + og_metadata + metadata + ["-c", "copy"] + [str(output)]
 
     logger.info(f"appending {input_paths}\n\toutputing to {output}")
     run_ffmpeg_command(command)

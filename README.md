@@ -57,6 +57,7 @@ translate=TARGET_LANG
 
 ```sh
 --force-detection
+--track=TRACK_INDEX
 --translation-mode=MODE_NAME  # 'local' (default), 'google'
 ```
 

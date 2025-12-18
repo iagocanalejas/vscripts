@@ -1,16 +1,16 @@
 import logging
-import os
 import subprocess
 from pathlib import Path
 from typing import Literal
 
+import vscripts.constants as C
 from vscripts.constants import HDR_COLOR_TRANSFERS
 
 logger = logging.getLogger("vscripts")
 
 
 SRT_FFMPEG_CODECS = {"mov_text", "subrip"}
-FFMPEG_BASE_COMMAND = ["ffmpeg", "-hide_banner", "-loglevel", "error"]
+FFMPEG_BASE_COMMAND = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y"]
 FFPROBE_BASE_COMMAND = ["ffprobe", "-hide_banner", "-loglevel", "error"]
 HANDBRAKE_BASE_COMMAND = [
     "HandBrakeCLI",
@@ -54,30 +54,24 @@ def suffix_by_codec(codec: str | None, codec_type: Literal["audio", "subtitle"])
 
 
 def run_ffmpeg_command(command: list[str]) -> None:
-    quiet = os.getenv("TEST_ENV", "false").lower() == "true"
     full_command = FFMPEG_BASE_COMMAND + command
-    logging.debug(full_command)
-    if quiet:
-        subprocess.run(full_command, text=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    else:
-        subprocess.run(full_command, text=True, check=True)
+    logger.debug(full_command)
+    capture = C.LOG_LEVEL != logging.DEBUG
+    subprocess.run(full_command, capture_output=capture, text=True, check=True)
 
 
 def run_ffprobe_command(path: Path, command: list[str]) -> str:
     full_command = FFPROBE_BASE_COMMAND + command + [str(path)]
-    logging.debug(full_command)
+    logger.debug(full_command)
     result = subprocess.run(full_command, capture_output=True, text=True, check=True)
     return result.stdout.strip()
 
 
 def run_handbrake_command(input_path: Path, output_path: Path, command: list[str]) -> None:
-    quiet = os.getenv("TEST_ENV", "false").lower() == "true"
     full_command = HANDBRAKE_BASE_COMMAND + ["-i", str(input_path), "-o", str(output_path)] + command
-    logging.debug(full_command)
-    if quiet:
-        subprocess.run(full_command, text=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    else:
-        subprocess.run(full_command, text=True, check=True)
+    logger.debug(full_command)
+    capture = C.LOG_LEVEL != logging.DEBUG
+    subprocess.run(full_command, capture_output=capture, text=True, check=True)
 
 
 def is_hdr(path: Path) -> bool:

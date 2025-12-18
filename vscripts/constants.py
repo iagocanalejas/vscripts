@@ -1,8 +1,10 @@
 import importlib.metadata
+import logging
 from typing import Literal
 
 APP_NAME = "VScripts"
 VERSION = importlib.metadata.version(APP_NAME.lower())
+LOG_LEVEL = logging.INFO
 
 NTSC_RATE = 23.976
 PAL_RATE = 25.0

@@ -1,4 +1,5 @@
 import argparse
+import logging
 from pathlib import Path
 
 import vscripts.constants as C
@@ -31,6 +32,10 @@ def main() -> int:
     print_logo()
 
     with error_handler(), logging_handler(True):
+        if args.verbose:
+            C.LOG_LEVEL = logging.DEBUG
+            logging.getLogger("vscripts").setLevel(logging.DEBUG)
+
         if not hasattr(args, "func"):
             parser.print_help()
             return 1
@@ -42,6 +47,7 @@ def main() -> int:
                 output=Path(args.output) if args.output else None,
                 force_detection=args.force_detection,
                 translation_mode=args.translation_mode,
+                **{"track": args.track},
             )
         elif args.command == "merge":
             return cli.cmd_merge(
@@ -57,6 +63,7 @@ def main() -> int:
 def _cmd_do(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     parser.add_argument("path", help="path to be handled")
     parser.add_argument("actions", type=str, nargs="*", help="list of actions to be ran")
+    parser.add_argument("-t", "--track", type=int, help="Track index for commands that require it.", default=None)
     parser.add_argument("--force-detection", action="store_true", help="Force overwrite of metadata.", default=False)
     parser.add_argument(
         "--translation-mode",
@@ -81,4 +88,5 @@ def _cmd_merge(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
 
 def _set_io(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     parser.add_argument("-o", "--output", type=str, help="Output file name.", default=None)
+    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging.", default=False)
     return parser

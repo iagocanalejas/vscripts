@@ -7,6 +7,7 @@ from vscripts.constants import ENCODING_1080P, ENCODING_PRESETS, UNKNOWN_LANGUAG
 from vscripts.data.language import find_audio_language, find_subs_language
 from vscripts.data.streams import AudioStream, FileStreams
 from vscripts.utils import get_output_file_path, is_hdr, run_ffmpeg_command, run_handbrake_command
+from vscripts.utils._utils import suffix_by_codec
 
 from ._extract import extract
 
@@ -41,9 +42,10 @@ def delay(
     if track is None and any(not a.file_path.is_file() for a in streams.audios):
         raise ValueError(f"one or more audio stream file paths are invalid in {streams.audios=}")
 
+    suffix = suffix_by_codec(streams.audios[track].codec_name, "audio") if track is not None else "mka"
     output = get_output_file_path(
         output or streams.file_path.parent,
-        default_name=f"{streams.file_path.stem}_delayed_{delay}{streams.file_path.suffix}",
+        default_name=f"{streams.file_path.stem}_delayed_{delay}.{suffix}",
     )
 
     logger.info(f"applying audio {delay=}ms to {streams.file_path.name}\n\toutputing to {output}")
@@ -90,11 +92,13 @@ def hasten(
     if track is None and any(not a.file_path.is_file() for a in streams.audios):
         raise ValueError(f"one or more audio stream file paths are invalid in {streams.audios=}")
 
+    suffix = suffix_by_codec(streams.audios[track].codec_name, "audio") if track is not None else "mka"
     output = get_output_file_path(
         output or streams.file_path.parent,
-        default_name=f"{streams.file_path.stem}_hastened_{hasten}{streams.file_path.suffix}",
+        default_name=f"{streams.file_path.stem}_hastened_{hasten}.{suffix}",
     )
 
+    # TODO: i think this is not working in all tracks if track is None
     logger.info(f"adjusting playback speed of {streams.file_path.name} by hasten={hasten}\n\toutputing to {output}")
     command = [
         "-ss",

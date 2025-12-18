@@ -44,6 +44,17 @@ class FileStreams:
         for subtitle in self.subtitles:
             subtitle.file_path = value
 
+    @property
+    def all_paths(self) -> list[Path]:
+        paths = set()
+        if self.video is not None:
+            paths.add(self.video.file_path)
+        for audio in self.audios:
+            paths.add(audio.file_path)
+        for subtitle in self.subtitles:
+            paths.add(subtitle.file_path)
+        return list(paths)
+
     @classmethod
     def from_file(cls, file_path: Path) -> "FileStreams":
         video: VideoStream | None = None
