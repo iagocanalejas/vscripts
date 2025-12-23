@@ -1,5 +1,6 @@
 import json
 import logging
+from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -19,11 +20,16 @@ CodecType = Literal["video", "audio", "subtitle"]
 
 @dataclass
 class Stream:
-    index: int
+    _index: int
     codec_name: str
     codec_type: CodecType
+    ffmpeg_index: int = 0
     file_path: Path = field(init=False)
     tags: dict[str, str] = field(default_factory=dict)
+
+    @property
+    def index(self) -> int:
+        return self._index
 
 
 @dataclass
@@ -47,7 +53,8 @@ class VideoStream(Stream):
             duration = _parse_duration(duration_time)
 
         return VideoStream(
-            index=data.get("index", -1),
+            _index=data["index"],
+            ffmpeg_index=data["index"],
             duration=float(duration) if duration is not None else None,
             r_frame_rate=_parse_frame_rate(data.get("r_frame_rate")),
             codec_name=data["codec_name"],
@@ -70,6 +77,12 @@ class VideoStream(Stream):
         stream.file_path = file_path
         stream.format_names = video_data.get("format", {}).get("format_name", "").split(",")
         return stream
+
+    def copy(self, with_new_path: Path | None = None) -> "VideoStream":
+        new_stream = deepcopy(self)
+        if with_new_path is not None:
+            new_stream.file_path = with_new_path
+        return new_stream
 
 
 @dataclass
@@ -118,7 +131,7 @@ class AudioStream(Stream):
             lang = UNKNOWN_LANGUAGE
 
         return AudioStream(
-            index=data.get("index", -1),
+            _index=data["index"],
             language=lang,
             duration=float(duration) if duration is not None else None,
             codec_name=data["codec_name"],
@@ -132,11 +145,13 @@ class AudioStream(Stream):
 
     @classmethod
     def from_file(cls, file_path: Path) -> list["AudioStream"]:
-        audio_data = _ffprobe_streams(file_path, "a")
-        streams = [cls.from_dict(data) for data in audio_data.get("streams", [])]
-        for stream in streams:
+        streams = _ffprobe_streams(file_path).get("streams", [])
+        audio_streams = [cls.from_dict(data) for data in streams if data["codec_type"] == CODEC_TYPE_AUDIO]
+        has_video = any(data["codec_type"] == CODEC_TYPE_VIDEO for data in streams)
+        for stream in audio_streams:
+            stream.ffmpeg_index = stream._index - 1 if has_video else stream._index
             stream.file_path = file_path
-        return streams
+        return audio_streams
 
     @classmethod
     def from_file_stream(cls, file_path: Path, track: int = 0) -> "AudioStream":
@@ -144,11 +159,18 @@ class AudioStream(Stream):
         stream.file_path = file_path
         return stream
 
+    def copy(self, with_new_path: Path | None = None) -> "AudioStream":
+        new_stream = deepcopy(self)
+        if with_new_path is not None:
+            new_stream.file_path = with_new_path
+        return new_stream
+
 
 @dataclass
 class SubtitleStream(Stream):
     language: str = UNKNOWN_LANGUAGE
     default: bool = False
+    generated: bool = False
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "SubtitleStream":
@@ -158,8 +180,9 @@ class SubtitleStream(Stream):
             ISO639_1_TO_3.get(lang, UNKNOWN_LANGUAGE)
         if lang in {"und", "unknown", "none", ""}:
             lang = UNKNOWN_LANGUAGE
+
         return SubtitleStream(
-            index=data.get("index", -1),
+            _index=data["index"],
             language=lang,
             codec_name=data["codec_name"],
             codec_type=data["codec_type"],
@@ -168,17 +191,26 @@ class SubtitleStream(Stream):
 
     @classmethod
     def from_file(cls, file_path: Path) -> list["SubtitleStream"]:
-        subtitle_data = _ffprobe_streams(file_path, "s")
-        streams = [cls.from_dict(data) for data in subtitle_data.get("streams", [])]
-        for stream in streams:
+        streams = _ffprobe_streams(file_path).get("streams", [])
+        subtitle_streams = [cls.from_dict(data) for data in streams if data["codec_type"] == CODEC_TYPE_SUBTITLE]
+        has_video = any(data["codec_type"] == CODEC_TYPE_VIDEO for data in streams)
+        audios = len([data for data in streams if data["codec_type"] == CODEC_TYPE_AUDIO])
+        for stream in subtitle_streams:
+            stream.ffmpeg_index = (stream._index - 1 if has_video else stream._index) - audios
             stream.file_path = file_path
-        return streams
+        return subtitle_streams
 
     @classmethod
     def from_file_stream(cls, file_path: Path, track: int = 0) -> "SubtitleStream":
         stream = cls.from_file(file_path)[int(track)]
         stream.file_path = file_path
         return stream
+
+    def copy(self, with_new_path: Path | None = None) -> "SubtitleStream":
+        new_stream = deepcopy(self)
+        if with_new_path is not None:
+            new_stream.file_path = with_new_path
+        return new_stream
 
 
 def _parse_duration(duration: str | None) -> float | None:
@@ -208,10 +240,11 @@ def _parse_frame_rate(frame_rate: str | None) -> float | None:
         return None
 
 
-def _ffprobe_streams(file_path: Path, stream_type: Literal["v", "a", "s"]) -> dict[str, Any]:
-    command = [
-        "-select_streams",
-        stream_type,
+def _ffprobe_streams(file_path: Path, stream_type: Literal["v", "a", "s"] | None = None) -> dict[str, Any]:
+    command = []
+    if stream_type is not None:
+        command += ["-select_streams", stream_type]
+    command += [
         "-show_entries",
         "stream=index,duration,r_frame_rate,codec_name,codec_type,color_space,color_transfer,color_primaries,bit_rate,sample_rate,channels,sample_fmt",
         "-show_entries",

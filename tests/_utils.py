@@ -1,6 +1,8 @@
 from pathlib import Path
+from typing import Literal
 
 from vscripts.utils import run_ffmpeg_command
+from vscripts.utils._utils import run_ffprobe_command
 
 
 def generate_test_subs(path: Path) -> Path:
@@ -16,15 +18,20 @@ This is a test.
     return path
 
 
-def generate_test_audio(path: Path, freq: int = 1000, duration: float = 0.5) -> Path:
-    command = [
-        "-f",
-        "lavfi",
-        "-i",
-        f"sine=frequency={freq}:duration={duration}",
+def generate_test_audio(path: Path, freq: int = 1000, duration: float = 2.5, streams: int = 1) -> Path:
+    command = []
+
+    for _ in range(streams):
+        command += ["-f", "lavfi", "-i", f"sine=frequency={freq}:duration={duration}"]
+
+    for i in range(streams):
+        command += ["-map", f"{i}:a"]
+
+    command += [
         str(path),
         "-y",
     ]
+
     run_ffmpeg_command(command)
     return path
 
@@ -54,7 +61,7 @@ def generate_test_full(
 ) -> Path:
     video_path = tmp_path / "video.mp4"
     subs_path = tmp_path / "subs.srt"
-    audio_path = tmp_path / "audio.mp3"
+    audio_path = tmp_path / "audio.mka"
     generate_test_video(video_path, duration=duration, rate=rate)
     generate_test_audio(audio_path, duration=duration)
     generate_test_subs(subs_path)
@@ -85,3 +92,40 @@ def generate_test_full(
     ]
     run_ffmpeg_command(command)
     return output
+
+
+def get_file_duration(path: Path) -> float:
+    command = [
+        "-show_entries",
+        "format=duration",
+        "-of",
+        "default=noprint_wrappers=1:nokey=1",
+    ]
+    return float(run_ffprobe_command(path, command))
+
+
+def has_video(path: Path) -> bool:
+    return has_stream(path, "video")
+
+
+def has_audio(path: Path) -> bool:
+    return has_stream(path, "audio")
+
+
+def has_subtitles(path: Path) -> bool:
+    return has_stream(path, "subtitle")
+
+
+def has_stream(path: Path, stream_type: Literal["audio", "subtitle", "video"]) -> bool:
+    stream_map = {"audio": "a", "subtitle": "s", "video": "v"}
+    if stream_type not in stream_map:
+        raise ValueError(f"Invalid stream type: {stream_type}")
+    command = [
+        "-select_streams",
+        stream_map[stream_type],
+        "-show_entries",
+        "stream=index",
+        "-of",
+        "csv=p=0",
+    ]
+    return bool(run_ffprobe_command(path, command))

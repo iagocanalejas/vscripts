@@ -20,7 +20,7 @@ def test_translate_subtitles_basic(tmp_path):
     subs_file = generate_test_subs(tmp_path / "input.srt")
     output = tmp_path / "translated.srt"
 
-    output = translate_subtitles(subs_file, "es", from_language="en", output=output)
+    output = translate_subtitles(subs_file, "spa", from_language="eng", output=output)[0]
 
     assert output.exists(), "Translated subtitle file should exist"
     assert output.suffix == ".srt", f"Unexpected extension: {output.suffix}"
@@ -36,7 +36,7 @@ def test_translate_subtitles_inferring_language(tmp_path):
     subs_file = generate_test_subs(tmp_path / "input.srt")
     output = tmp_path / "translated.srt"
 
-    output = translate_subtitles(subs_file, "spa", output=output)
+    output = translate_subtitles(subs_file, "spa", output=output)[0]
 
     assert output.exists(), "Translated subtitle file should exist"
     assert output.suffix == ".srt", f"Unexpected extension: {output.suffix}"

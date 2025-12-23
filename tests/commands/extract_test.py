@@ -1,11 +1,9 @@
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 from vscripts.commands._extract import dissect, extract
-from vscripts.utils import has_audio, has_subtitles
 
-from tests._utils import generate_test_full
+from tests._utils import generate_test_full, has_audio, has_subtitles
 
 
 def test_extract_io():
@@ -22,9 +20,8 @@ def test_extract_audio_and_subs(tmp_path):
     assert has_audio(video_path)
     assert has_subtitles(video_path)
 
-    with patch("vscripts.commands._extract.find_language", return_value="spa"):
-        audio_out = extract(video_path, track=0, stream_type="audio")
-        subs_out = extract(video_path, track=0, stream_type="subtitle")
+    audio_out = extract(video_path, track=0, stream_type="audio")[0]
+    subs_out = extract(video_path, track=0, stream_type="subtitle")[0]
 
     assert audio_out.exists(), "Audio output file should exist"
     assert audio_out.suffix in {".mp3", ".aac", ".wav", ".m4a"}, f"Unexpected audio extension {audio_out.suffix}"
@@ -42,11 +39,9 @@ def test_dissect(tmp_path):
     assert has_audio(video_path)
     assert has_subtitles(video_path)
 
-    output_dir = dissect(video_path, output=tmp_path)
+    output_paths = dissect(video_path, output=tmp_path)
 
-    assert output_dir.exists() and output_dir.is_dir(), "Output directory should exist"
-    files = list(output_dir.glob("stream_*"))
-    assert len(files) >= 3, f"Expected multiple output streams, found {len(files)}"
-
-    for f in files:
-        assert f.stat().st_size > 0, f"Stream file {f.name} should not be empty"
+    for out_path in output_paths:
+        assert out_path.exists(), f"Output file {out_path.name} should exist"
+        assert out_path.stat().st_size > 0, f"Output file {out_path.name} should not be empty"
+        assert out_path.parent == tmp_path, f"Output file {out_path.name} should be in the specified output directory"

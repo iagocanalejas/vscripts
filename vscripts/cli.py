@@ -14,12 +14,9 @@ from vscripts.constants import (
     COMMAND_DELAY,
     COMMAND_EXTRACT,
     COMMAND_HASTEN,
-    COMMAND_INSPECT,
-    COMMAND_TRANSLATE,
     NTSC_RATE,
 )
 from vscripts.data.matcher import NameMatcher
-from vscripts.data.models import ProcessingData
 
 logger = logging.getLogger("vscripts")
 
@@ -32,17 +29,11 @@ def cmd_do(input_path: Path, actions: list[str], output: Path | None, **kwargs) 
         raise ValueError(f"When input path is a directory, output path must also be a directory. Got {output=}")
 
     def inner_do(path: Path, output: Path | None) -> int:
-        if COMMAND_INSPECT in parsed_actions:
-            if len(parsed_actions) > 1:
-                logger.warning("The 'inspect' command should be used alone. Other commands will be ignored.")
-            COMMANDS[COMMAND_INSPECT](path, output=output, force_detection=kwargs.get("force_detection", False))
-            return 0
-
-        track = 0
+        track = None
         if COMMAND_EXTRACT in parsed_actions:
-            track_args = parsed_actions[COMMAND_EXTRACT]
-            track = track_args[0] if track_args else 0
-        data = ProcessingData.from_path(path, audio_track=track)
+            extract_args = parsed_actions[COMMAND_EXTRACT]
+            if extract_args:
+                track = extract_args.pop()
 
         last_path = path
         with create_temp_dir() as temp_dir:
@@ -52,18 +43,11 @@ def cmd_do(input_path: Path, actions: list[str], output: Path | None, **kwargs) 
 
                 fn = COMMANDS[command]
                 if command == COMMAND_APPEND and args is None:
-                    last_path = fn(attachment=last_path, root=path, output=Path(temp_dir), extra=data)
-                elif command == COMMAND_TRANSLATE:
-                    last_path = fn(
-                        last_path,
-                        *args if args is not None else [],
-                        output=Path(temp_dir),
-                        mode=kwargs.get("translation_mode", "local"),
-                    )
+                    last_path = fn(root=path, attachment=last_path, output=Path(temp_dir), **kwargs)[0]
                 elif args is not None:
-                    last_path = fn(last_path, *args, output=Path(temp_dir), extra=data)
+                    last_path = fn(last_path, *args, track=track, output=Path(temp_dir), **kwargs)[0]
                 else:
-                    last_path = fn(last_path, output=Path(temp_dir), extra=data)
+                    last_path = fn(last_path, track=track, output=Path(temp_dir), **kwargs)[0]
 
             if output is None:
                 output = path.parent / last_path.name

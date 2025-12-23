@@ -11,20 +11,46 @@ from vscripts.utils import count_srt_entries, get_output_file_path, infer_media_
 logger = logging.getLogger("vscripts")
 
 
-def merge(target: Path, data: Path, *, output: Path | None, **_) -> Path:
-    """
-    Merges audio and subtitle streams from `data` into the `target` video file.
+def merge(
+    target: Path,
+    data: Path,
+    *,
+    output: Path | None,
+    **_,
+) -> list[Path]:
+    """Merge audio and subtitle streams from a data file into a target video.
+
+    This function combines the video stream from `target` with audio and subtitle streams from both `target` and
+    `data`. The resulting file preserves the original video without re-encoding and copies all audio and subtitle
+    streams. Forced subtitles in the data file are automatically set as default if applicable.
+
     Args:
-        target (Path): The path to the target video file.
-        data (Path): The path to the file containing audio and subtitle streams to merge.
-        output (Path | None): The output path for the merged file. If None, defaults to the target's parent directory.
-    Returns: The path to the merged output file.
+        target: Path to the base video file whose video stream will be used.
+        data: Path to the media file containing audio and subtitle streams to merge into the target.
+        output: Optional output file path. If not provided, a default path is created in the target file’s directory
+            with suffix `_merged.mkv`.
+        **_: Ignored keyword arguments (accepted for API compatibility).
+
+    Returns:
+        Path to the merged output MKV file.
+
+    Raises:
+        ValueError: If `data` contains no valid audio streams to merge.
+        ValueError: If `target` or `data` does not exist or is not a file.
     """
+    if not target.is_file():
+        raise ValueError(f"invalid {target=}")
+    if not data.is_file():
+        raise ValueError(f"invalid {data=}")
+
     video: VideoStream | None = None
     audios: list[AudioStream] = []
     subtitles: list[SubtitleStream] = []
 
-    output = get_output_file_path(output or target.parent, f"{target.stem}_merged.mkv")
+    output = get_output_file_path(
+        output or target.parent,
+        default_name=f"{target.stem}_merged.mkv",
+    )
 
     with create_temp_dir() as temp_dir:
         logger.info(f"using temporary directory {temp_dir}")
@@ -66,12 +92,12 @@ def merge(target: Path, data: Path, *, output: Path | None, **_) -> Path:
 
         for i in range(len(audios)):
             command += ["-map", f"{i + 1}:a"]
-            lang = audios[i].language if audios[i].language is not None else "und"
+            lang = audios[i].language
             command += [f"-metadata:s:a:{i}", f"language={lang}"]
 
         for i in range(len(subtitles)):
             command += ["-map", f"{i + 1 + len(audios)}:s"]
-            lang = subtitles[i].language if subtitles[i].language is not None else "und"
+            lang = subtitles[i].language
             command += [f"-metadata:s:s:{i}", f"language={lang}"]
             if subtitles[i].default:
                 command += [f"-disposition:s:{i}", "default"]
@@ -81,15 +107,15 @@ def merge(target: Path, data: Path, *, output: Path | None, **_) -> Path:
 
         logger.info(f"merging f{data} into {target}\n\toutputing to {output}")
         run_ffmpeg_command(command)
-        return output
+        return [output]
 
 
-def _retrieve_target_streams(target_path: Path) -> tuple[VideoStream, list[AudioStream], list[SubtitleStream]]:
+def _retrieve_target_streams(target_paths: list[Path]) -> tuple[VideoStream, list[AudioStream], list[SubtitleStream]]:
     video_stream: VideoStream | None = None
     audio_streams: list[AudioStream] = []
     subtitle_streams: list[SubtitleStream] = []
 
-    for file in target_path.iterdir():
+    for file in target_paths:
         if not file.is_file():
             logger.warning(f"skipping non-file {file} in dissected target path (should not happen)")
             continue
@@ -126,11 +152,11 @@ def _retrieve_target_streams(target_path: Path) -> tuple[VideoStream, list[Audio
     return video_stream, audio_streams, subtitle_streams
 
 
-def _retrieve_data_streams(data_path: Path) -> tuple[list[AudioStream], list[SubtitleStream]]:
+def _retrieve_data_streams(data_paths: list[Path]) -> tuple[list[AudioStream], list[SubtitleStream]]:
     audio_streams: list[AudioStream] = []
     subtitle_streams: list[SubtitleStream] = []
 
-    for file in data_path.iterdir():
+    for file in data_paths:
         if not file.is_file():
             logger.warning(f"skipping non-file {file} in dissected data file (should not happen)")
             continue
@@ -167,8 +193,8 @@ def _retrieve_data_streams(data_path: Path) -> tuple[list[AudioStream], list[Sub
 
 
 # TODO: improve language detection for forced subtitles
-def _retrieve_forced_subs(data_path: Path, duration: float) -> SubtitleStream | None:
-    subtitles = [SubtitleStream.from_file(f)[0] for f in data_path.iterdir() if is_subs(f)]
+def _retrieve_forced_subs(data_paths: list[Path], duration: float) -> SubtitleStream | None:
+    subtitles = [SubtitleStream.from_file(f)[0] for f in data_paths if is_subs(f)]
     counts = [(count_srt_entries(s.file_path.read_text(encoding="utf-8", errors="ignore")), s) for s in subtitles]
     if len(counts) == 0:
         return None

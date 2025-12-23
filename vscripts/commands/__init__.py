@@ -1,9 +1,9 @@
 from pathlib import Path
 from collections.abc import Callable
+from typing import Any
 
 from vscripts.constants import (
     COMMAND_APPEND,
-    COMMAND_APPEND_SUBS,
     COMMAND_ATEMPO,
     COMMAND_ATEMPO_VIDEO,
     COMMAND_ATEMPO_WITH,
@@ -19,7 +19,6 @@ from vscripts.constants import (
 
 from ._append import (
     append as append,
-    append_subs as append_subs,
 )
 
 from ._atempo import (
@@ -52,9 +51,8 @@ from ._translate import (
     translate_subtitles as translate_subtitles,
 )
 
-COMMANDS: dict[str, Callable[..., Path]] = {
+COMMANDS: dict[str, Callable[..., list[Path]]] = {
     COMMAND_APPEND: append,
-    COMMAND_APPEND_SUBS: append_subs,
     COMMAND_ATEMPO: atempo,
     COMMAND_ATEMPO_WITH: atempo_with,
     COMMAND_ATEMPO_VIDEO: atempo_video,

@@ -109,6 +109,10 @@ def find_audio_language(
     return lang
 
 
+def is_unknown_language(lang: str) -> bool:
+    return lang in {UNKNOWN_LANGUAGE, "und", "unknown", "none", ""}
+
+
 def _convert_lang_code(lang: str) -> str:
     if lang is None or len(lang) == 3:
         return lang

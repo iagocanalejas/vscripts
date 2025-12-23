@@ -1,63 +1,17 @@
 import logging
-import os
 import subprocess
 from pathlib import Path
-from typing import Any, Literal
+from typing import Literal
 
-from whisper.utils import json
-
+import vscripts.constants as C
 from vscripts.constants import HDR_COLOR_TRANSFERS
 
 logger = logging.getLogger("vscripts")
 
 
-def get_output_file_path(maybe_output: Path, default_name: str) -> Path:
-    if maybe_output.is_dir():
-        if not maybe_output.exists():
-            maybe_output.mkdir(parents=True, exist_ok=True)
-        maybe_output = maybe_output / default_name
-    return maybe_output
-
-
-def ffmpeg_copy_by_codec(codec: str | None) -> list[str]:
-    if codec and codec.lower() in ["mov_text"]:
-        return ["-c:s", "srt"]
-    return ["-c", "copy"]
-
-
-def suffix_by_codec(codec: str | None, codec_type: Literal["audio", "subtitle"]) -> str:
-    if not codec:
-        return "m4a" if codec_type == "audio" else "srt"
-    if codec.lower() == "mov_text" or codec.lower() == "subrip":
-        return "srt"
-    if codec.lower() == "ac3":
-        return "mka"
-    return codec.lower()
-
-
-FFMPEG_BASE_COMMAND = ["ffmpeg", "-hide_banner", "-loglevel", "error"]
-
-
-def run_ffmpeg_command(command: list[str]) -> None:
-    quiet = os.getenv("TEST_ENV", "false").lower() == "true"
-    full_command = FFMPEG_BASE_COMMAND + command
-    logging.debug(full_command)
-    if quiet:
-        subprocess.run(full_command, text=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    else:
-        subprocess.run(full_command, text=True, check=True)
-
-
+SRT_FFMPEG_CODECS = {"mov_text", "subrip"}
+FFMPEG_BASE_COMMAND = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y"]
 FFPROBE_BASE_COMMAND = ["ffprobe", "-hide_banner", "-loglevel", "error"]
-
-
-def run_ffprobe_command(path: Path, command: list[str]) -> str:
-    full_command = FFPROBE_BASE_COMMAND + command + [str(path)]
-    logging.debug(full_command)
-    result = subprocess.run(full_command, capture_output=True, text=True, check=True)
-    return result.stdout.strip()
-
-
 HANDBRAKE_BASE_COMMAND = [
     "HandBrakeCLI",
     "--verbose=3",
@@ -68,62 +22,140 @@ HANDBRAKE_BASE_COMMAND = [
     "--all-subtitles",
     "--subtitle-burn=none",
 ]
+VIDEO_EXTENSIONS = {".mp4", ".mkv", ".mov", ".avi", ".webm", ".hevc", ".h264"}
+AUDIO_EXTENSIONS = {".mp3", ".wav", ".flac", ".aac", ".ogg", ".eac3", ".ac3", ".m4a", ".mka"}
+SUBTITLE_EXTENSIONS = {".srt", ".vtt", ".ass", ".ssa"}
+
+
+def get_output_file_path(maybe_output: Path, default_name: str) -> Path:
+    """
+    Determine the output file path based on the provided maybe_output path.
+    If maybe_output is a directory, create it if it doesn't exist and append the default_name to it.
+    Args:
+        maybe_output (Path): The potential output path, which can be a file or directory.
+        default_name (str): The default file name to use if maybe_output is a directory.
+    Returns: The resolved output file path.
+    """
+    if maybe_output.is_dir():
+        if not maybe_output.exists():
+            maybe_output.mkdir(parents=True, exist_ok=True)
+        maybe_output = maybe_output / default_name
+    return maybe_output
+
+
+def run_ffmpeg_command(command: list[str]) -> None:
+    full_command = FFMPEG_BASE_COMMAND + command
+    logger.debug(full_command)
+    capture = C.LOG_LEVEL != logging.DEBUG
+    subprocess.run(full_command, capture_output=capture, text=True, check=True)
+
+
+def run_ffprobe_command(path: Path, command: list[str]) -> str:
+    full_command = FFPROBE_BASE_COMMAND + command + [str(path)]
+    logger.debug(full_command)
+    result = subprocess.run(full_command, capture_output=True, text=True, check=True)
+    return result.stdout.strip()
 
 
 def run_handbrake_command(input_path: Path, output_path: Path, command: list[str]) -> None:
-    quiet = os.getenv("TEST_ENV", "false").lower() == "true"
     full_command = HANDBRAKE_BASE_COMMAND + ["-i", str(input_path), "-o", str(output_path)] + command
-    logging.debug(full_command)
-    if quiet:
-        subprocess.run(full_command, text=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    else:
-        subprocess.run(full_command, text=True, check=True)
+    logger.debug(full_command)
+    capture = C.LOG_LEVEL != logging.DEBUG
+    subprocess.run(full_command, capture_output=capture, text=True, check=True)
 
 
-def get_file_duration(path: Path) -> float:
-    command = [
-        "-show_entries",
-        "format=duration",
-        "-of",
-        "default=noprint_wrappers=1:nokey=1",
-    ]
-    return float(run_ffprobe_command(path, command))
+def suffix_by_codec(codec: str | None, codec_type: Literal["audio", "subtitle"]) -> str:
+    if not codec:
+        return "m4a" if codec_type == "audio" else "srt"
+    if codec.lower() in SRT_FFMPEG_CODECS:
+        return "srt"
+    if codec.lower() in {"ac3", "vorbis"}:
+        return "mka"
+    return codec.lower()
 
 
-def has_video(path: Path) -> bool:
-    return has_stream(path, "video")
+_CONTAINER_SUBTITLE_SUPPORT = {
+    ".mp4": {"mov_text"},
+    ".mkv": {"ass", "pgs"},
+    ".webm": {"webvtt"},
+    ".avi": {"subrip", "srt"},
+    ".mov": {"mov_text"},
+    ".ogv": {"theora", "subrip"},
+}
+_EXTENSION_TO_CODEC = {
+    ".srt": "subrip",
+    ".ass": "ass",
+    ".ssa": "ssa",
+    ".vtt": "webvtt",
+    ".sub": "dvdsub",
+    ".idx": "dvdsub",
+}
 
 
-def has_audio(path: Path) -> bool:
-    return has_stream(path, "audio")
+def ffmpeg_subtitle_codec_for_suffix(input: Path, output: Path, codec: str) -> str:
+    """
+    Returns:
+      - 'copy' if -c:s copy is safe
+      - subtitle codec name if transcoding is required (e.g. 'srt')
+    """
+    in_ext = input.suffix.lower()
+    out_ext = output.suffix.lower()
+
+    # we can't copy from a subtitle file, must transcode
+    if in_ext in {".srt", ".ass", ".ssa", ".vtt", ".sub", ".idx"}:
+        if out_ext in {".mp4", ".mov"}:
+            return "mov_text"
+        if out_ext == ".webm":
+            return "webvtt"
+        return "subrip"
+
+    # check if the codec is supported in the output container
+    supported_codecs = _CONTAINER_SUBTITLE_SUPPORT.get(out_ext, set())
+    if codec in supported_codecs:
+        return "copy"
+
+    # check if we can infer a suitable codec from the output file extension
+    codec_from_suffix = _EXTENSION_TO_CODEC.get(input.suffix.lower())
+    if codec_from_suffix and codec_from_suffix in supported_codecs:
+        return codec_from_suffix
+
+    return {
+        ".mp4": "mov_text",
+        ".mkv": "subrip",
+        ".webm": "webvtt",
+        ".avi": "subrip",
+        ".mov": "mov_text",
+    }.get(out_ext, "subrip")
 
 
-def has_subtitles(path: Path) -> bool:
-    return has_stream(path, "subtitle")
+_CONTAINER_AUDIO_SUPPORT = {
+    ".mp4": {"aac", "mp3", "alac", "ac3", "eac3"},
+    ".mov": {"aac", "mp3", "alac", "ac3", "eac3"},
+    ".mkv": {"aac", "mp3", "opus", "flac", "vorbis", "ac3", "eac3", "dts", "truehd"},
+    ".webm": {"opus", "vorbis"},
+}
 
 
-def has_stream(path: Path, stream_type: Literal["audio", "subtitle", "video"]) -> bool:
-    stream_map = {"audio": "a", "subtitle": "s", "video": "v"}
-    if stream_type not in stream_map:
-        raise ValueError(f"Invalid stream type: {stream_type}")
-    command = [
-        "-select_streams",
-        stream_map[stream_type],
-        "-show_entries",
-        "stream=index",
-        "-of",
-        "csv=p=0",
-    ]
-    return bool(run_ffprobe_command(path, command))
+def ffmpeg_audio_codec_for_suffix(input: Path, output: Path, codec: str) -> str:
+    """
+    Returns:
+      - 'copy' if -c:a copy is safe
+      - audio codec name if transcoding is required (e.g. 'aac')
+    """
+    out_ext = output.suffix.lower()
 
+    supported_codecs = _CONTAINER_AUDIO_SUPPORT.get(out_ext, set())
+    if codec in supported_codecs:
+        return "copy"
 
-def get_streams(path: Path) -> list[dict[str, Any]]:
-    command = [
-        "-show_streams",
-        "-print_format",
-        "json",
-    ]
-    return json.loads(run_ffprobe_command(path, command)).get("streams", [])
+    if out_ext in {".aac", ".wav", ".flac", ".opus"}:
+        return codec if out_ext.lstrip(".") == codec else out_ext.lstrip(".")
+
+    if out_ext == ".webm":
+        return "opus"
+    if out_ext in {".mp4", ".mov"}:
+        return "aac"
+    return "aac"
 
 
 def is_hdr(path: Path) -> bool:
@@ -137,11 +169,6 @@ def is_hdr(path: Path) -> bool:
     ]
     result = run_ffprobe_command(path, command)
     return any(h in result.lower() for h in HDR_COLOR_TRANSFERS)
-
-
-VIDEO_EXTENSIONS = {".mp4", ".mkv", ".mov", ".avi", ".webm", ".hevc", ".h264"}
-AUDIO_EXTENSIONS = {".mp3", ".wav", ".flac", ".aac", ".ogg", ".eac3", ".ac3", ".m4a", ".mka"}
-SUBTITLE_EXTENSIONS = {".srt", ".vtt", ".ass", ".ssa"}
 
 
 def is_subs(path: Path) -> bool:

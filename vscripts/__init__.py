@@ -1,9 +1,5 @@
-from pathlib import Path
-from collections.abc import Callable
-
 from .constants import (
     COMMAND_APPEND as COMMAND_APPEND,
-    COMMAND_APPEND_SUBS as COMMAND_APPEND_SUBS,
     COMMAND_ATEMPO as COMMAND_ATEMPO,
     COMMAND_ATEMPO_VIDEO as COMMAND_ATEMPO_VIDEO,
     COMMAND_ATEMPO_WITH as COMMAND_ATEMPO_WITH,

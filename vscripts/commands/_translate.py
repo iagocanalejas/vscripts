@@ -6,73 +6,112 @@ from typing import Literal
 from googletrans import Translator
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 
+from pyutils.paths import create_temp_dir
+from vscripts.commands._extract import extract
 from vscripts.constants import INVISIBLE_SEPARATOR, ISO639_3_TO_1, UNKNOWN_LANGUAGE
 from vscripts.data.language import find_subs_language
+from vscripts.data.streams import SubtitleStream
 from vscripts.utils import get_output_file_path, parse_srt, rebuild_srt
-from vscripts.utils._utils import is_subs
 
 logger = logging.getLogger("vscripts")
 
 
 def translate_subtitles(
     input_path: Path,
-    language: str,
+    to_language: str,
     from_language: str | None = None,
     *,
-    output: Path | None = None,
+    track: int | None = None,
     mode: Literal["local", "google"] = "local",
+    output: Path | None = None,
     **_,
-) -> Path:
+) -> list[Path]:
     """
-    Translate subtitle file to specified language using Helsinki-NLP translation models.
+    Translate subtitle files from one language to another.
+
+    This function translates one or more subtitle streams from a media file into a specified target language. If no
+    track is specified, all available subtitle streams are processed. The source language can be explicitly provided
+    or inferred from the subtitle stream when possible.
+
     Args:
-        input_path (Path): The path to the input subtitle file.
-        language (str): The target language code for translation.
-        from_language (str | None): The source language code of the input subtitles.
-        output (Path | None): The path to save the output translated subtitle file.
-        mode (Literal["local", "google"]): Mode to use ("local" for Helsinki-NLP, "google" for Google Translate).
-    Returns: The path to the newly created translated subtitle file.
+        input_path: Path to the input media file containing subtitle streams.
+        to_language: Target language code for translation. Must be a valid ISO 639-3 code.
+        from_language: Optional source language code. If provided, it must be a valid ISO 639-3 code. When omitted,
+            the source language is inferred from the subtitle stream.
+        track: Optional index of the subtitle track to translate. If ``None``, all available subtitle tracks are
+            processed.
+        mode: Translation mode to use. Must be either ``"local"`` or ``"google"``.
+        output: Optional output file path or directory. If not provided, translated subtitle files are written to the
+            input file’s directory.
+        **_: Ignored keyword arguments (accepted for API compatibility).
+
+    Returns:
+        A list of paths to the translated subtitle (`.srt`) files. One path is returned per processed subtitle stream.
+
+    Raises:
+        ValueError: If `input_path` does not exist or is not a file.
+        ValueError: If no subtitle streams are found in the input file.
+        ValueError: If `track` is out of range for the available subtitle streams.
+        ValueError: If `to_language` is not a valid ISO 639-3 language code.
+        ValueError: If `from_language` is provided and is not a valid ISO
     """
     if not input_path.is_file():
         raise ValueError(f"invalid {input_path=}")
-    if not is_subs(input_path):
-        raise ValueError(f"{input_path} is not a subtitle file")
 
-    if from_language is None:
-        from_language = find_subs_language(input_path)
-        logger.info(f"inferred language='{from_language}' for {input_path.name} from audio stream")
+    streams = SubtitleStream.from_file(input_path)
+    if len(streams) == 0:
+        raise ValueError(f"no subtitle streams found in {input_path=}")
+    if track is not None and (track < 0 or track >= len(streams)):
+        raise ValueError(f"invalid subtitle track index {track=} for {streams=}")
+    if len(to_language) != 3:
+        raise ValueError(f"invalid target language code '{to_language}', must be ISO 639-3")
+    if from_language is not None and len(from_language) != 3:
+        raise ValueError(f"invalid source language code '{from_language}', must be ISO 639-3")
 
-    if from_language == UNKNOWN_LANGUAGE:
-        logger.warning(f"could not determine language for {input_path.name}, defaulting to 'eng'")
-        from_language = "eng"
+    def inner_translate(index: int, to_lang: str, from_lang: str | None) -> Path:
+        stream = streams[index]
+        if index > 0:
+            extracted = extract(input_path, track=index, stream_type="subtitle", output=Path(temp_dir))[0]
+            stream = SubtitleStream.from_file(extracted)[0]
 
-    if len(from_language) == 3:
-        logger.info(f"converting ISO 639-3 from_language code '{from_language}' to ISO 639-1")
-        from_language = ISO639_3_TO_1.get(from_language, from_language)
-    if len(language) == 3:
-        logger.info(f"converting ISO 639-3 language code '{language}' to ISO 639-1")
-        language = ISO639_3_TO_1.get(language, language)
+        output_path = get_output_file_path(
+            output or input_path.parent,
+            default_name=f"{input_path.stem}_track{index}_{to_lang}.srt",
+        )
 
-    output = get_output_file_path(
-        output or input_path.parent,
-        default_name=f"{input_path.stem}_{language}.srt",
-    )
+        if from_lang is None:
+            from_lang = find_subs_language(stream)
+            logger.info(f"inferred '{from_lang}' for {input_path.name} from audio stream")
 
-    with input_path.open("r", encoding="utf-8", errors="ignore") as f:
-        content = f.read()
+        if from_lang == UNKNOWN_LANGUAGE:
+            logger.warning(f"could not determine language for {input_path.name}, defaulting to 'eng'")
+            from_lang = "eng"
 
-    logger.info(f"translating subtitles from '{from_language}' to '{language}'")
-    logger.info(f"translation mode: {mode}")
-    if mode == "google":
-        content = _translate_subtitles_googletrans(content, from_language, language)
-    else:
-        content = _translate_subtitles_helsinki(content, from_language, language)
+        if len(from_lang) == 3:
+            logger.debug(f"converting ISO 639-3 from_lang code '{from_lang=}' to ISO 639-1")
+            from_lang = ISO639_3_TO_1.get(from_lang, from_lang)
+        if len(to_lang) == 3:
+            logger.debug(f"converting ISO 639-3 lang code '{to_lang=}' to ISO 639-1")
+            to_lang = ISO639_3_TO_1.get(to_lang, to_lang)
 
-    logger.info(f"writing translated subtitles to {output}")
-    with output.open("w", encoding="utf-8") as f:
-        f.write(content)
+        with stream.file_path.open("r", encoding="utf-8", errors="ignore") as f:
+            content = f.read()
 
-    return output
+        logger.info(f"translating subtitles from '{from_lang=}' to '{to_lang=}'. {mode=}")
+        if mode == "google":
+            content = _translate_subtitles_googletrans(content, from_lang, to_lang)
+        else:
+            content = _translate_subtitles_helsinki(content, from_lang, to_lang)
+
+        logger.info(f"writing translated subtitles to {output_path}")
+        with output_path.open("w", encoding="utf-8") as f:
+            f.write(content)
+
+        return output_path
+
+    with create_temp_dir() as temp_dir:
+        indices = range(len(streams)) if track is None else [track]
+        return [inner_translate(i, to_language, from_language) for i in indices]
 
 
 def _translate_subtitles_helsinki(content: str, from_language: str, language: str) -> str:
