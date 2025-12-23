@@ -1,8 +1,10 @@
 import importlib.metadata
+import logging
 from typing import Literal
 
 APP_NAME = "VScripts"
 VERSION = importlib.metadata.version(APP_NAME.lower())
+LOG_LEVEL = logging.INFO
 
 NTSC_RATE = 23.976
 PAL_RATE = 25.0
@@ -21,7 +23,6 @@ COMMAND_EXTRACT = "extract"
 COMMAND_INSPECT = "inspect"
 COMMAND_DISSECT = "dissect"
 COMMAND_APPEND = "append"
-COMMAND_APPEND_SUBS = "subs"
 COMMAND_GENERATE_SUBS = "generate-subs"
 COMMAND_TRANSLATE = "translate"
 
@@ -51,3 +52,9 @@ ISO639_1_TO_3 = {
     "ja": "jpn",
 }
 ISO639_3_TO_1 = {v: k for k, v in ISO639_1_TO_3.items()}
+
+TYPE_TO_FFMPEG_TYPE = {
+    "video": "v",
+    "audio": "a",
+    "subtitle": "s",
+}

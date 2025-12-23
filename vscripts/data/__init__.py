@@ -2,6 +2,7 @@ from .language import (
     find_audio_language as find_audio_language,
     find_subs_language as find_subs_language,
     find_language as find_language,
+    is_unknown_language as is_unknown_language,
 )
 
 from .matcher import (

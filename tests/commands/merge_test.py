@@ -6,13 +6,14 @@ import pytest
 from vscripts.commands import merge
 from vscripts.commands._merge import _retrieve_data_streams, _retrieve_target_streams
 from vscripts.data.streams import AudioStream, SubtitleStream, VideoStream
-from vscripts.utils import FFPROBE_BASE_COMMAND, has_video
+from vscripts.utils import FFPROBE_BASE_COMMAND
 
 from tests._utils import (
     generate_test_audio,
     generate_test_full,
     generate_test_subs,
     generate_test_video,
+    has_video,
 )
 
 
@@ -48,7 +49,7 @@ def test_merge_two_videos(tmp_path):
             return_value=([audio2_stream], [subs2_stream]),
         ),
     ):
-        merged_output = merge(target_path, data_path, output=output_path)
+        merged_output = merge(target_path, data_path, output=output_path)[0]
 
     assert merged_output.exists()
     assert merged_output.stat().st_size > 0
@@ -120,7 +121,7 @@ def test_merge_two_videos_forced_subs(tmp_path):
             return_value=subs3_stream,
         ),
     ):
-        merged_output = merge(target_path, data_path, output=output_path)
+        merged_output = merge(target_path, data_path, output=output_path)[0]
 
     assert merged_output.exists()
     assert merged_output.stat().st_size > 0
@@ -180,7 +181,7 @@ def test__retrieve_target_streams(tmp_path):
             return_value=[subs_stream],
         ),
     ):
-        v_stream, a_streams, s_streams = _retrieve_target_streams(tmp_path)
+        v_stream, a_streams, s_streams = _retrieve_target_streams(list(tmp_path.iterdir()))
 
     assert v_stream == video_stream
     assert a_streams == [audio_stream]
@@ -198,7 +199,7 @@ def test__retrieve_data_streams(tmp_path):
         patch("vscripts.commands._merge.find_audio_language", return_value="spa"),
         patch("vscripts.commands._merge.find_subs_language", return_value="spa"),
     ):
-        a_streams, s_streams = _retrieve_data_streams(tmp_path)
+        a_streams, s_streams = _retrieve_data_streams(list(tmp_path.iterdir()))
 
     assert len(a_streams) == 1
     assert len(s_streams) == 1

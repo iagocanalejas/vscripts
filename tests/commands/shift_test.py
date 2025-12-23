@@ -5,9 +5,15 @@ import pytest
 from vscripts.commands._shift import delay, hasten, inspect, reencode
 from vscripts.constants import ENCODING_1080P
 from vscripts.data.streams import _ffprobe_streams
-from vscripts.utils import get_file_duration, has_audio, has_subtitles
 
-from tests._utils import generate_test_audio, generate_test_full, generate_test_video
+from tests._utils import (
+    generate_test_audio,
+    generate_test_full,
+    generate_test_video,
+    get_file_duration,
+    has_audio,
+    has_subtitles,
+)
 
 
 def test_shift_io():
@@ -23,14 +29,12 @@ def test_shift_io():
 
 @pytest.mark.integration
 def test_simple_delay(tmp_path):
-    input_file = tmp_path / "input.wav"
-    output_file = tmp_path / "output.wav"
-
-    generate_test_audio(input_file)
+    input_file = generate_test_audio(tmp_path / "input.mka")
+    output_file = tmp_path / "output.mka"
 
     assert input_file.exists() and input_file.stat().st_size > 0
 
-    result = delay(input_file, 0.25, output=output_file)
+    result = delay(input_file, 0.25, output=output_file)[0]
 
     assert result == output_file
     assert output_file.exists()
@@ -40,14 +44,12 @@ def test_simple_delay(tmp_path):
 
 @pytest.mark.integration
 def test_simple_hasten(tmp_path):
-    input_file = tmp_path / "input.wav"
+    input_file = generate_test_audio(tmp_path / "input.mka")
     output_file = tmp_path / "output.wav"
-
-    generate_test_audio(input_file)
 
     assert input_file.exists() and input_file.stat().st_size > 0
 
-    result = hasten(input_file, 0.25, output=output_file)
+    result = hasten(input_file, 0.25, output=output_file)[0]
 
     assert result == output_file
     assert output_file.exists()
@@ -61,7 +63,7 @@ def test_inspect_adds_language_metadata(tmp_path):
     assert has_audio(video_path)
     assert has_subtitles(video_path)
 
-    inspected_path = inspect(video_path, force_detection=True)
+    inspected_path = inspect(video_path, force_detection=True)[0]
 
     assert inspected_path.exists(), "Output file should exist"
     assert inspected_path != video_path, "Output file should be a new file"
@@ -83,7 +85,7 @@ def test_inspect_adds_language_metadata(tmp_path):
 @pytest.mark.integration
 def test_inspect_no_metadata_no_processing(tmp_path):
     empty_video = generate_test_video(tmp_path / "test_video2.mp4", duration=1)
-    no_metadata_path = inspect(empty_video)
+    no_metadata_path = inspect(empty_video)[0]
     assert no_metadata_path == empty_video, "Should return same path if no metadata added"
 
 
@@ -105,7 +107,7 @@ def test_reencode(monkeypatch, tmp_path):
     input_file = generate_test_full(tmp_path, duration=2)
     output_file = tmp_path / "reencoded.mkv"
 
-    result = reencode(input_file, ENCODING_1080P, output=output_file)
+    result = reencode(input_file, ENCODING_1080P, output=output_file)[0]
 
     assert result == output_file
     assert output_file.exists()
