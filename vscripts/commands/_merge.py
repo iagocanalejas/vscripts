@@ -161,7 +161,6 @@ def _retrieve_data_streams(data_paths: list[Path]) -> tuple[list[AudioStream], l
             logger.warning(f"skipping non-file {file} in dissected data file (should not happen)")
             continue
 
-        # TODO: CAP S02E03 not finding spanish audio track
         ext = infer_media_type(file)
         if ext == "audio":
             audio_stream = AudioStream.from_file(file)[0]
