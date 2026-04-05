@@ -2,7 +2,7 @@ fast-langdetect==1.0.0
 googletrans==4.0.2
 openai-whisper==20250625
 pyutils @ git+https://github.com/iagocanalejas/pyutils.git@master
-requests==2.33.0
+requests==2.33.1
 sacremoses==0.1.1
 sentencepiece==0.2.1
-transformers==5.4.0
+transformers==5.5.0
