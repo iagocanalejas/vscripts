@@ -1,5 +1,5 @@
 -r requirements.txt
 coverage==7.13.5
-pytest==9.0.2
+pytest==9.0.3
 pytest-xdist==3.8.0
 types-requests>=2.32.4
