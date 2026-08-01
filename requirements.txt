@@ -5,4 +5,4 @@ pyutils @ git+https://github.com/iagocanalejas/pyutils.git@master
 requests==2.34.2
 sacremoses==0.1.1
 sentencepiece==0.2.2
-transformers==5.13.1
+transformers==5.14.1
