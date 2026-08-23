@@ -3,6 +3,6 @@ googletrans==4.0.2
 openai-whisper==20250625
 pyutils @ git+https://github.com/iagocanalejas/pyutils.git@master
 requests==2.34.2
-sacremoses==0.1.1
+sacremoses==0.2.0
 sentencepiece==0.2.2
-transformers==5.14.1
+transformers==5.15.1
