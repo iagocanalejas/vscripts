@@ -46,7 +46,7 @@ class VideoStream(Stream):
         return self.color_transfer.lower() in HDR_COLOR_TRANSFERS
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "VideoStream":
+    def from_dict(cls, data: dict[str, Any]) -> VideoStream:
         duration = data.get("duration", None)
         if not duration and "DURATION" in data.get("tags", {}).keys():
             duration_time = data["tags"]["DURATION"]
@@ -66,7 +66,7 @@ class VideoStream(Stream):
         )
 
     @classmethod
-    def from_file(cls, file_path: Path) -> "VideoStream | None":
+    def from_file(cls, file_path: Path) -> VideoStream | None:
         video_data = _ffprobe_streams(file_path, "v")
         streams = [cls.from_dict(data) for data in video_data.get("streams", [])]
         if len(streams) > 1:
@@ -78,7 +78,7 @@ class VideoStream(Stream):
         stream.format_names = video_data.get("format", {}).get("format_name", "").split(",")
         return stream
 
-    def copy(self, with_new_path: Path | None = None) -> "VideoStream":
+    def copy(self, with_new_path: Path | None = None) -> VideoStream:
         new_stream = deepcopy(self)
         if with_new_path is not None:
             new_stream.file_path = with_new_path
@@ -117,7 +117,7 @@ class AudioStream(Stream):
         return score
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "AudioStream":
+    def from_dict(cls, data: dict[str, Any]) -> AudioStream:
         duration = data.get("duration", None)
         if not duration and "DURATION" in data.get("tags", {}).keys():
             duration_time = data["tags"]["DURATION"]
@@ -144,7 +144,7 @@ class AudioStream(Stream):
         )
 
     @classmethod
-    def from_file(cls, file_path: Path) -> list["AudioStream"]:
+    def from_file(cls, file_path: Path) -> list[AudioStream]:
         streams = _ffprobe_streams(file_path).get("streams", [])
         audio_streams = [cls.from_dict(data) for data in streams if data["codec_type"] == CODEC_TYPE_AUDIO]
         has_video = any(data["codec_type"] == CODEC_TYPE_VIDEO for data in streams)
@@ -154,12 +154,12 @@ class AudioStream(Stream):
         return audio_streams
 
     @classmethod
-    def from_file_stream(cls, file_path: Path, track: int = 0) -> "AudioStream":
+    def from_file_stream(cls, file_path: Path, track: int = 0) -> AudioStream:
         stream = cls.from_file(file_path)[int(track)]
         stream.file_path = file_path
         return stream
 
-    def copy(self, with_new_path: Path | None = None) -> "AudioStream":
+    def copy(self, with_new_path: Path | None = None) -> AudioStream:
         new_stream = deepcopy(self)
         if with_new_path is not None:
             new_stream.file_path = with_new_path
@@ -173,7 +173,7 @@ class SubtitleStream(Stream):
     generated: bool = False
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "SubtitleStream":
+    def from_dict(cls, data: dict[str, Any]) -> SubtitleStream:
         lang = data.get("tags", {}).get("language", UNKNOWN_LANGUAGE)
         if len(lang) < 3:
             logger.debug(f"found audio language tag: {lang}")
@@ -190,7 +190,7 @@ class SubtitleStream(Stream):
         )
 
     @classmethod
-    def from_file(cls, file_path: Path) -> list["SubtitleStream"]:
+    def from_file(cls, file_path: Path) -> list[SubtitleStream]:
         streams = _ffprobe_streams(file_path).get("streams", [])
         subtitle_streams = [cls.from_dict(data) for data in streams if data["codec_type"] == CODEC_TYPE_SUBTITLE]
         has_video = any(data["codec_type"] == CODEC_TYPE_VIDEO for data in streams)
@@ -201,12 +201,12 @@ class SubtitleStream(Stream):
         return subtitle_streams
 
     @classmethod
-    def from_file_stream(cls, file_path: Path, track: int = 0) -> "SubtitleStream":
+    def from_file_stream(cls, file_path: Path, track: int = 0) -> SubtitleStream:
         stream = cls.from_file(file_path)[int(track)]
         stream.file_path = file_path
         return stream
 
-    def copy(self, with_new_path: Path | None = None) -> "SubtitleStream":
+    def copy(self, with_new_path: Path | None = None) -> SubtitleStream:
         new_stream = deepcopy(self)
         if with_new_path is not None:
             new_stream.file_path = with_new_path
@@ -236,7 +236,7 @@ def _parse_frame_rate(frame_rate: str | None) -> float | None:
         if denominator == 0:
             return None
         return numerator / denominator
-    except (ValueError, ZeroDivisionError):
+    except ValueError, ZeroDivisionError:
         return None
 
 

@@ -3,10 +3,6 @@ on: [push]
 jobs:
     test:
         runs-on: ubuntu-latest
-        strategy:
-            matrix:
-                python-version: ["3.13"]
-
         steps:
             - uses: actions/checkout@v7
 
@@ -22,10 +18,10 @@ jobs:
             - name: Verify HandBrakeCLI installation
               run: HandBrakeCLI --version
 
-            - name: Set up Python ${{ matrix.python-version }}
-              uses: actions/setup-python@v7
+            - uses: actions/setup-python@v7
               with:
-                  python-version: ${{ matrix.python-version }}
+                  python-version: "3.14"
+                  cache: "pip"
 
             - name: Pre-commit checks
               uses: pre-commit/action@v3.0.1
@@ -39,11 +35,10 @@ jobs:
             - name: Test package is installable
               run: pip install .
 
-            - name: Pytest + code coverage
+            - name: Pytest + Coverage
               run: |
-                  TEST_ENV=true coverage run -m pytest && coverage report -m
-
-            - name: Test coverage
-              run: |
-                  TEST_ENV=true coverage run --source=tests -m pytest &&
-                  coverage report -m --fail-under=100
+                  TEST_ENV=true coverage run --source=. -m pytest &&
+                  echo "=== Application Coverage ===" &&
+                  coverage report --include="vscripts/*" -m &&
+                  echo "=== Test Code Coverage (100% required) ===" &&
+                  coverage report --include="tests/*" --fail-under=100

@@ -1,5 +1,5 @@
 -r requirements.txt
-coverage==7.14.1
-pytest==9.1.0
-pytest-xdist==3.8.0
-types-requests>=2.33.0
+coverage
+pytest
+pytest-xdist
+types-requests

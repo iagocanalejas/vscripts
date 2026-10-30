@@ -9,7 +9,7 @@ description = "A utility to automate video editing tasks."
 readme = "README.md"
 license = { file = "LICENSE.md" }
 authors = [{ name = "Iago Santos" }]
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 classifiers = [
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only"
